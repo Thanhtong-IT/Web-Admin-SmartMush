@@ -1,17 +1,44 @@
 import { create } from 'zustand'
 import type {
+  ActuatorKey,
+  CabinetActuatorKey,
   Device,
   DeviceActuators,
   DeviceFormValues,
   DeviceTelemetry,
+  GatewayMaster,
+  NodeAddress,
 } from '../types/device.types'
+import {
+  NODE_ADDRESS_DIP_SWITCHES,
+  NODE_ADDRESSES,
+  getTrayValveKey,
+} from '../types/device.types'
+
+export const MOCK_GATEWAY_MASTER: GatewayMaster = {
+  id: 'GATEWAY-MASTER-001',
+  model: 'ESP32-S3',
+  ipAddress: '192.168.1.100',
+  macAddress: '7C:DF:A1:10:20:30',
+  firmwareVersion: 'v2.1.0',
+  lastPingTimestamp: '2026-09-01T08:30:00+07:00',
+  wifiRssi: -48,
+  status: 'ONLINE',
+}
 
 export const MOCK_DEVICES: Device[] = [
   {
     id: 'DEVICE-001',
-    trayId: 'TRAY-001',
-    ipAddress: '192.168.1.101',
-    macAddress: '24:6F:28:A1:B2:C3',
+    gateway: MOCK_GATEWAY_MASTER,
+    node: {
+      id: 'NODE-001',
+      model: 'STM32',
+      protocol: 'RS485',
+      nodeAddress: 1,
+      dipSwitch: NODE_ADDRESS_DIP_SWITCHES[1],
+      trayId: 'TRAY-001',
+      status: 'ONLINE',
+    },
     firmwareVersion: 'v1.4.2',
     lastPingTimestamp: '2026-09-01T08:30:00+07:00',
     wifiRssi: -48,
@@ -24,9 +51,18 @@ export const MOCK_DEVICES: Device[] = [
       updatedAt: '2026-09-01T08:30:00+07:00',
     },
     actuators: {
-      fanStatus: true,
-      pumpStatus: false,
-      lightStatus: true,
+      cabinet: {
+        exhaustFanStatus: true,
+        supplyFanStatus: false,
+        mainPumpStatus: true,
+        lightingStatus: true,
+      },
+      tray: {
+        valve1Status: false,
+        valve2Status: false,
+        valve3Status: false,
+        valve4Status: false,
+      },
       mode: 'AUTO',
     },
     camera: {
@@ -39,9 +75,16 @@ export const MOCK_DEVICES: Device[] = [
   },
   {
     id: 'DEVICE-002',
-    trayId: 'TRAY-002',
-    ipAddress: '192.168.1.102',
-    macAddress: '24:6F:28:C3:D4:E5',
+    gateway: MOCK_GATEWAY_MASTER,
+    node: {
+      id: 'NODE-002',
+      model: 'STM32',
+      protocol: 'RS485',
+      nodeAddress: 2,
+      dipSwitch: NODE_ADDRESS_DIP_SWITCHES[2],
+      trayId: 'TRAY-002',
+      status: 'WARNING',
+    },
     firmwareVersion: 'v1.4.1',
     lastPingTimestamp: '2026-09-01T08:27:00+07:00',
     wifiRssi: -63,
@@ -54,9 +97,18 @@ export const MOCK_DEVICES: Device[] = [
       updatedAt: '2026-09-01T08:27:00+07:00',
     },
     actuators: {
-      fanStatus: false,
-      pumpStatus: true,
-      lightStatus: true,
+      cabinet: {
+        exhaustFanStatus: true,
+        supplyFanStatus: false,
+        mainPumpStatus: true,
+        lightingStatus: true,
+      },
+      tray: {
+        valve1Status: false,
+        valve2Status: true,
+        valve3Status: false,
+        valve4Status: false,
+      },
       mode: 'MANUAL',
     },
     camera: {
@@ -69,9 +121,16 @@ export const MOCK_DEVICES: Device[] = [
   },
   {
     id: 'DEVICE-003',
-    trayId: 'TRAY-003',
-    ipAddress: '192.168.1.103',
-    macAddress: '24:6F:28:E5:F6:A7',
+    gateway: MOCK_GATEWAY_MASTER,
+    node: {
+      id: 'NODE-003',
+      model: 'STM32',
+      protocol: 'RS485',
+      nodeAddress: 3,
+      dipSwitch: NODE_ADDRESS_DIP_SWITCHES[3],
+      trayId: 'TRAY-003',
+      status: 'OFFLINE',
+    },
     firmwareVersion: 'v1.3.8',
     lastPingTimestamp: '2026-09-01T07:55:00+07:00',
     wifiRssi: -82,
@@ -84,9 +143,18 @@ export const MOCK_DEVICES: Device[] = [
       updatedAt: '2026-09-01T07:55:00+07:00',
     },
     actuators: {
-      fanStatus: false,
-      pumpStatus: false,
-      lightStatus: false,
+      cabinet: {
+        exhaustFanStatus: true,
+        supplyFanStatus: false,
+        mainPumpStatus: true,
+        lightingStatus: true,
+      },
+      tray: {
+        valve1Status: false,
+        valve2Status: false,
+        valve3Status: false,
+        valve4Status: false,
+      },
       mode: 'AUTO',
     },
     camera: {
@@ -94,6 +162,52 @@ export const MOCK_DEVICES: Device[] = [
       resolution: '1280x720',
       fps: 15,
       isLive: false,
+      lastSnapshotUrl: null,
+    },
+  },
+  {
+    id: 'DEVICE-004',
+    gateway: MOCK_GATEWAY_MASTER,
+    node: {
+      id: 'NODE-004',
+      model: 'STM32',
+      protocol: 'RS485',
+      nodeAddress: 4,
+      dipSwitch: NODE_ADDRESS_DIP_SWITCHES[4],
+      trayId: 'TRAY-004',
+      status: 'ONLINE',
+    },
+    firmwareVersion: 'v1.4.0',
+    lastPingTimestamp: '2026-09-01T08:25:00+07:00',
+    wifiRssi: -51,
+    status: 'ONLINE',
+    telemetry: {
+      temperature: 25.1,
+      humidity: 86,
+      co2: 680,
+      soilMoisture: 71,
+      updatedAt: '2026-09-01T08:25:00+07:00',
+    },
+    actuators: {
+      cabinet: {
+        exhaustFanStatus: true,
+        supplyFanStatus: false,
+        mainPumpStatus: true,
+        lightingStatus: true,
+      },
+      tray: {
+        valve1Status: false,
+        valve2Status: false,
+        valve3Status: false,
+        valve4Status: false,
+      },
+      mode: 'AUTO',
+    },
+    camera: {
+      streamUrl: 'https://example.invalid/mcms/tray-004.m3u8',
+      resolution: '1280x720',
+      fps: 20,
+      isLive: true,
       lastSnapshotUrl: null,
     },
   },
@@ -107,7 +221,8 @@ interface DeviceState {
   deleteDevice: (id: string) => void
   setTelemetrySimulationEnabled: (enabled: boolean) => void
   simulateTelemetry: () => void
-  toggleActuator: (id: string, actuator: keyof Omit<DeviceActuators, 'mode'>) => void
+  toggleActuator: (id: string, actuator: ActuatorKey) => void
+  setTrayMisting: (id: string, enabled: boolean) => void
   setControlMode: (id: string, mode: DeviceActuators['mode']) => void
   pingDevice: (id: string) => void
   restartDevice: (id: string) => void
@@ -123,6 +238,20 @@ function getNextDeviceId(devices: Device[]) {
   }, 0)
 
   return `DEVICE-${String(highestId + 1).padStart(3, '0')}`
+}
+
+function getNextNodeAddress(devices: Device[]): NodeAddress {
+  const usedAddresses = new Set(devices.map((device) => device.node.nodeAddress))
+  return NODE_ADDRESSES.find((address) => !usedAddresses.has(address)) ?? 4
+}
+
+function isCabinetActuator(actuator: ActuatorKey): actuator is CabinetActuatorKey {
+  return (
+    actuator === 'exhaustFanStatus' ||
+    actuator === 'supplyFanStatus' ||
+    actuator === 'mainPumpStatus' ||
+    actuator === 'lightingStatus'
+  )
 }
 
 function getNow() {
@@ -149,14 +278,31 @@ function createTelemetry(telemetry: DeviceTelemetry): DeviceTelemetry {
   }
 }
 
-function createDevice(values: DeviceFormValues, id: string): Device {
+function createDevice(
+  values: DeviceFormValues,
+  id: string,
+  nodeAddress: NodeAddress,
+): Device {
   const now = getNow()
 
   return {
     id,
-    trayId: values.trayId,
-    ipAddress: values.ipAddress,
-    macAddress: values.macAddress.toUpperCase(),
+    gateway: {
+      ...MOCK_GATEWAY_MASTER,
+      ipAddress: values.ipAddress,
+      macAddress: values.macAddress.toUpperCase(),
+      firmwareVersion: values.firmwareVersion,
+      lastPingTimestamp: now,
+    },
+    node: {
+      id: `NODE-${String(nodeAddress).padStart(3, '0')}`,
+      model: 'STM32',
+      protocol: 'RS485',
+      nodeAddress,
+      dipSwitch: NODE_ADDRESS_DIP_SWITCHES[nodeAddress],
+      trayId: values.trayId,
+      status: 'ONLINE',
+    },
     firmwareVersion: values.firmwareVersion,
     lastPingTimestamp: now,
     wifiRssi: -55,
@@ -169,9 +315,18 @@ function createDevice(values: DeviceFormValues, id: string): Device {
       updatedAt: now,
     },
     actuators: {
-      fanStatus: false,
-      pumpStatus: false,
-      lightStatus: false,
+      cabinet: {
+        exhaustFanStatus: false,
+        supplyFanStatus: false,
+        mainPumpStatus: false,
+        lightingStatus: false,
+      },
+      tray: {
+        valve1Status: false,
+        valve2Status: false,
+        valve3Status: false,
+        valve4Status: false,
+      },
       mode: 'AUTO',
     },
     camera: {
@@ -189,9 +344,15 @@ export const useDeviceStore = create<DeviceState>((set) => ({
   telemetrySimulationEnabled: false,
 
   addDevice: (values) =>
-    set((state) => ({
-      devices: [createDevice(values, getNextDeviceId(state.devices)), ...state.devices],
-    })),
+    set((state) => {
+      const nodeAddress = getNextNodeAddress(state.devices)
+      return {
+        devices: [
+          createDevice(values, getNextDeviceId(state.devices), nodeAddress),
+          ...state.devices,
+        ],
+      }
+    }),
 
   updateDevice: (id, values) =>
     set((state) => ({
@@ -199,9 +360,13 @@ export const useDeviceStore = create<DeviceState>((set) => ({
         device.id === id
           ? {
               ...device,
-              trayId: values.trayId,
-              ipAddress: values.ipAddress,
-              macAddress: values.macAddress.toUpperCase(),
+              gateway: {
+                ...device.gateway,
+                ipAddress: values.ipAddress,
+                macAddress: values.macAddress.toUpperCase(),
+                firmwareVersion: values.firmwareVersion,
+              },
+              node: { ...device.node, trayId: values.trayId },
               firmwareVersion: values.firmwareVersion,
               camera: {
                 ...device.camera,
@@ -232,19 +397,96 @@ export const useDeviceStore = create<DeviceState>((set) => ({
     })),
 
   toggleActuator: (id, actuator) =>
-    set((state) => ({
-      devices: state.devices.map((device) =>
-        device.id === id
-          ? {
-              ...device,
-              actuators: {
-                ...device.actuators,
-                [actuator]: !device.actuators[actuator],
-              },
-            }
-          : device,
-      ),
-    })),
+    set((state) => {
+      const targetDevice = state.devices.find((device) => device.id === id)
+
+      if (!targetDevice) {
+        return state
+      }
+
+      if (isCabinetActuator(actuator)) {
+        const nextValue = !targetDevice.actuators.cabinet[actuator]
+        return {
+          devices: state.devices.map((device) =>
+            device.gateway.id === targetDevice.gateway.id
+              ? {
+                  ...device,
+                  actuators: {
+                    ...device.actuators,
+                    cabinet: {
+                      ...device.actuators.cabinet,
+                      [actuator]: nextValue,
+                    },
+                  },
+                }
+              : device,
+          ),
+        }
+      }
+
+      return {
+        devices: state.devices.map((device) =>
+          device.id === id
+            ? {
+                ...device,
+                actuators: {
+                  ...device.actuators,
+                  tray: {
+                    ...device.actuators.tray,
+                    [actuator]: !device.actuators.tray[actuator],
+                  },
+                },
+              }
+            : device,
+        ),
+      }
+    }),
+
+  setTrayMisting: (id, enabled) =>
+    set((state) => {
+      const targetDevice = state.devices.find((device) => device.id === id)
+
+      if (!targetDevice) {
+        return state
+      }
+
+      const valveKey = getTrayValveKey(targetDevice.node.nodeAddress)
+      const updatedDevices = state.devices.map((device) => {
+        if (device.id !== id) {
+          return device
+        }
+
+        const trayActuators: DeviceActuators['tray'] = {
+          ...device.actuators.tray,
+          [valveKey]: enabled,
+        }
+
+        return {
+          ...device,
+          actuators: { ...device.actuators, tray: trayActuators },
+        }
+      })
+      const hasActiveValve = updatedDevices
+        .filter((device) => device.gateway.id === targetDevice.gateway.id)
+        .some((device) => Object.values(device.actuators.tray).some(Boolean))
+
+      return {
+        devices: updatedDevices.map((device) =>
+          device.gateway.id === targetDevice.gateway.id
+            ? {
+                ...device,
+                actuators: {
+                  ...device.actuators,
+                  cabinet: {
+                    ...device.actuators.cabinet,
+                    mainPumpStatus: hasActiveValve,
+                  },
+                },
+              }
+            : device,
+        ),
+      }
+    }),
 
   setControlMode: (id, mode) =>
     set((state) => ({
@@ -257,30 +499,50 @@ export const useDeviceStore = create<DeviceState>((set) => ({
 
   pingDevice: (id) =>
     set((state) => ({
-      devices: state.devices.map((device) =>
-        device.id === id
-          ? {
-              ...device,
-              status: device.status === 'ERROR' ? 'WARNING' : 'ONLINE',
-              lastPingTimestamp: getNow(),
-              wifiRssi: Math.max(-90, Math.min(-35, device.wifiRssi + Math.round(getRandomDelta(8)))),
-            }
-          : device,
-      ),
+      devices: state.devices.map((device) => {
+        if (device.id !== id) {
+          return device
+        }
+
+        const status = device.status === 'ERROR' ? 'WARNING' : 'ONLINE'
+        const lastPingTimestamp = getNow()
+        const wifiRssi = Math.max(
+          -90,
+          Math.min(-35, device.wifiRssi + Math.round(getRandomDelta(8))),
+        )
+
+        return {
+          ...device,
+          status,
+          lastPingTimestamp,
+          wifiRssi,
+          node: { ...device.node, status },
+          gateway: { ...device.gateway, lastPingTimestamp, wifiRssi },
+        }
+      }),
     })),
 
   restartDevice: (id) =>
     set((state) => ({
-      devices: state.devices.map((device) =>
-        device.id === id
-          ? {
-              ...device,
-              status: 'ONLINE',
-              lastPingTimestamp: getNow(),
-              camera: { ...device.camera, isLive: true },
-            }
-          : device,
-      ),
+      devices: state.devices.map((device) => {
+        if (device.id !== id) {
+          return device
+        }
+
+        const lastPingTimestamp = getNow()
+        return {
+          ...device,
+          status: 'ONLINE',
+          lastPingTimestamp,
+          node: { ...device.node, status: 'ONLINE' },
+          gateway: {
+            ...device.gateway,
+            status: 'ONLINE',
+            lastPingTimestamp,
+          },
+          camera: { ...device.camera, isLive: true },
+        }
+      }),
     })),
 
   takeSnapshot: (id) => {

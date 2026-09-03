@@ -1,23 +1,59 @@
 import { useState } from 'react'
 import {
+  ApiOutlined,
   BulbOutlined,
   ExperimentOutlined,
+  SwapOutlined,
   ThunderboltOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
-import { Alert, Card, Flex, Modal, Segmented, Space, Switch, Tag, Typography } from 'antd'
+import {
+  Alert,
+  Card,
+  Divider,
+  Flex,
+  Modal,
+  Segmented,
+  Space,
+  Switch,
+  Tag,
+  Typography,
+} from 'antd'
 import type {
+  ActuatorKey,
+  CabinetActuatorKey,
   ControlMode,
   DeviceActuators,
   DeviceStatus,
+  TrayValveKey,
 } from '../../../types/device.types'
 
 interface ActuatorControlPanelProps {
   actuators: DeviceActuators
   deviceStatus: DeviceStatus
-  onToggle: (actuator: keyof Omit<DeviceActuators, 'mode'>) => void
+  onToggle: (actuator: ActuatorKey) => void
   onModeChange: (mode: ControlMode) => void
 }
+
+interface ActuatorDefinition<Key extends ActuatorKey> {
+  key: Key
+  label: string
+  icon: React.ReactNode
+}
+
+const CABINET_ACTUATORS: Array<ActuatorDefinition<CabinetActuatorKey>> = [
+  { key: 'exhaustFanStatus', label: 'Quạt hút', icon: <ThunderboltOutlined /> },
+  { key: 'supplyFanStatus', label: 'Quạt đẩy', icon: <SwapOutlined /> },
+  { key: 'lightingStatus', label: 'Đèn chiếu sáng', icon: <BulbOutlined /> },
+  { key: 'mainPumpStatus', label: 'Bơm chính', icon: <ExperimentOutlined /> },
+]
+
+const TRAY_VALVES: Array<ActuatorDefinition<TrayValveKey>> = [
+  { key: 'valve1Status', label: 'Van 1', icon: <ApiOutlined /> },
+  { key: 'valve2Status', label: 'Van 2', icon: <ApiOutlined /> },
+  { key: 'valve3Status', label: 'Van 3', icon: <ApiOutlined /> },
+  { key: 'valve4Status', label: 'Van 4', icon: <ApiOutlined /> },
+]
 
 export function ActuatorControlPanel({
   actuators,
@@ -43,10 +79,27 @@ export function ActuatorControlPanel({
     setIsModeDialogOpen(false)
   }
 
+  const renderSwitch = (control: ActuatorDefinition<ActuatorKey>, checked: boolean) => (
+    <Flex align="center" justify="space-between" gap={12} key={control.key}>
+      <Space>
+        {control.icon}
+        <Typography.Text>{control.label}</Typography.Text>
+      </Space>
+      <Switch
+        checked={checked}
+        disabled={!isManual || isUnavailable}
+        onChange={() => onToggle(control.key)}
+        checkedChildren="Bật"
+        unCheckedChildren="Tắt"
+        aria-label={`Bật hoặc tắt ${control.label.toLowerCase()}`}
+      />
+    </Flex>
+  )
+
   return (
     <>
       <Card
-        title="Điều khiển thiết bị"
+        title="Điều khiển 8 relay SSR"
         extra={
           <Segmented<ControlMode>
             size="small"
@@ -80,51 +133,24 @@ export function ActuatorControlPanel({
           </Tag>
         )}
 
+        <Typography.Title level={5} style={{ margin: '0 0 12px' }}>
+          Thiết bị dùng chung toàn tủ
+        </Typography.Title>
         <Flex vertical gap={14}>
-          <Flex align="center" justify="space-between" gap={12}>
-            <Space>
-              <ThunderboltOutlined />
-              <Typography.Text>Quạt thông gió</Typography.Text>
-            </Space>
-            <Switch
-              checked={actuators.fanStatus}
-              disabled={!isManual || isUnavailable}
-              onChange={() => onToggle('fanStatus')}
-              checkedChildren="Bật"
-              unCheckedChildren="Tắt"
-              aria-label="Bật hoặc tắt quạt thông gió"
-            />
-          </Flex>
+          {CABINET_ACTUATORS.map((control) =>
+            renderSwitch(control, actuators.cabinet[control.key]),
+          )}
+        </Flex>
 
-          <Flex align="center" justify="space-between" gap={12}>
-            <Space>
-              <ExperimentOutlined />
-              <Typography.Text>Máy phun sương</Typography.Text>
-            </Space>
-            <Switch
-              checked={actuators.pumpStatus}
-              disabled={!isManual || isUnavailable}
-              onChange={() => onToggle('pumpStatus')}
-              checkedChildren="Bật"
-              unCheckedChildren="Tắt"
-              aria-label="Bật hoặc tắt máy phun sương"
-            />
-          </Flex>
+        <Divider />
 
-          <Flex align="center" justify="space-between" gap={12}>
-            <Space>
-              <BulbOutlined />
-              <Typography.Text>Đèn LED quang phổ</Typography.Text>
-            </Space>
-            <Switch
-              checked={actuators.lightStatus}
-              disabled={!isManual || isUnavailable}
-              onChange={() => onToggle('lightStatus')}
-              checkedChildren="Bật"
-              unCheckedChildren="Tắt"
-              aria-label="Bật hoặc tắt đèn LED quang phổ"
-            />
-          </Flex>
+        <Typography.Title level={5} style={{ margin: '0 0 12px' }}>
+          Van tưới riêng từng khay
+        </Typography.Title>
+        <Flex vertical gap={14}>
+          {TRAY_VALVES.map((control) =>
+            renderSwitch(control, actuators.tray[control.key]),
+          )}
         </Flex>
       </Card>
 
@@ -137,8 +163,8 @@ export function ActuatorControlPanel({
         cancelText="Hủy"
       >
         <Typography.Paragraph>
-          Khi ở chế độ thủ công, các relay sẽ không được bộ điều khiển AUTO tự động
-          ghi đè. Bạn có chắc muốn tiếp tục?
+          Khi ở chế độ thủ công, các relay sẽ không được bộ điều khiển AUTO tự động ghi đè.
+          Bạn có chắc muốn tiếp tục?
         </Typography.Paragraph>
       </Modal>
     </>

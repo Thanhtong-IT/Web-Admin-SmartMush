@@ -59,7 +59,7 @@ export function DeviceFormModal({
 
   return (
     <Modal
-      title={initialValues ? 'Cập nhật thiết bị ESP32' : 'Ghép nối thiết bị ESP32'}
+      title={initialValues ? 'Cập nhật Gateway Master' : 'Ghép nối Node STM32'}
       open={open}
       onCancel={onCancel}
       onOk={() => form.submit()}
@@ -81,7 +81,7 @@ export function DeviceFormModal({
         onFinish={handleFinish}
       >
         <Form.Item
-          label="Khay trồng"
+          label="Khay trồng / Node STM32"
           name="trayId"
           rules={[{ required: true, message: 'Vui lòng chọn khay trồng.' }]}
         >
@@ -94,7 +94,7 @@ export function DeviceFormModal({
         </Form.Item>
 
         <Form.Item
-          label="Địa chỉ IP"
+          label="Địa chỉ IP Gateway Master"
           name="ipAddress"
           rules={[
             { required: true, message: 'Vui lòng nhập địa chỉ IP.' },
@@ -109,7 +109,7 @@ export function DeviceFormModal({
         </Form.Item>
 
         <Form.Item
-          label="Địa chỉ MAC"
+          label="Địa chỉ MAC Gateway Master"
           name="macAddress"
           rules={[
             { required: true, message: 'Vui lòng nhập địa chỉ MAC.' },
@@ -123,7 +123,7 @@ export function DeviceFormModal({
         </Form.Item>
 
         <Form.Item
-          label="Phiên bản Firmware"
+          label="Phiên bản Firmware Gateway"
           name="firmwareVersion"
           rules={[{ required: true, message: 'Vui lòng nhập phiên bản firmware.' }]}
         >

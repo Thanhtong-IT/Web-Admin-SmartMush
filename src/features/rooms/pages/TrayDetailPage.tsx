@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import {
   ApiOutlined,
   ArrowLeftOutlined,
@@ -24,19 +23,24 @@ import { EnvironmentChart } from '../../dashboard/components/EnvironmentChart'
 import type { EnvironmentDataPoint } from '../../dashboard/components/EnvironmentChart'
 import { EnvironmentMetricCard } from '../../dashboard/components/EnvironmentMetricCard'
 import { RoomStatusTag } from '../components/RoomStatusTag'
+import { useDeviceStore } from '../../../stores/device.store'
 import { useRoomStore } from '../../../stores/room.store'
+import { getTrayValveKey } from '../../../types/device.types'
+import type { NodeAddress } from '../../../types/device.types'
 import type { Tray } from '../../../types/room.types'
 
 interface TrayDetail
   extends Pick<Tray, 'name' | 'deviceId' | 'mushroomType' | 'status'> {
   temperature: number
   humidity: number
+  nodeAddress: NodeAddress
 }
 
 const MOCK_TRAY_DETAILS: Record<string, TrayDetail> = {
   'TRAY-001': {
     name: 'Khay tầng 1',
     deviceId: 'ESP32-A1B2',
+    nodeAddress: 1,
     mushroomType: 'Nấm bào ngư',
     status: 'ACTIVE',
     temperature: 25.6,
@@ -45,6 +49,7 @@ const MOCK_TRAY_DETAILS: Record<string, TrayDetail> = {
   'TRAY-002': {
     name: 'Khay tầng 2',
     deviceId: 'ESP32-C3D4',
+    nodeAddress: 2,
     mushroomType: 'Nấm linh chi',
     status: 'ACTIVE',
     temperature: 26.1,
@@ -53,6 +58,7 @@ const MOCK_TRAY_DETAILS: Record<string, TrayDetail> = {
   'TRAY-003': {
     name: 'Khay tầng 3',
     deviceId: 'ESP32-E5F6',
+    nodeAddress: 3,
     mushroomType: 'Nấm mối',
     status: 'MAINTENANCE',
     temperature: 24.8,
@@ -61,6 +67,7 @@ const MOCK_TRAY_DETAILS: Record<string, TrayDetail> = {
   'TRAY-004': {
     name: 'Khay tầng 4',
     deviceId: 'ESP32-G7H8',
+    nodeAddress: 4,
     mushroomType: 'Nấm hương',
     status: 'INACTIVE',
     temperature: 23.9,
@@ -105,12 +112,16 @@ export function TrayDetailPage() {
   const storedTray = useRoomStore((state) =>
     state.trays.find((tray) => tray.id === id),
   )
-  const [isFanEnabled, setIsFanEnabled] = useState(true)
-  const [isMistingEnabled, setIsMistingEnabled] = useState(false)
+  const device = useDeviceStore((state) =>
+    state.devices.find((candidate) => candidate.node.trayId === id),
+  )
+  const toggleActuator = useDeviceStore((state) => state.toggleActuator)
+  const setTrayMisting = useDeviceStore((state) => state.setTrayMisting)
 
   const fallbackTray: TrayDetail = {
     name: id ? `Khay ${id}` : 'Khay không xác định',
     deviceId: 'Chưa kết nối',
+    nodeAddress: 1,
     mushroomType: 'Chưa xác định',
     status: 'INACTIVE',
     temperature: 0,
@@ -121,6 +132,12 @@ export function TrayDetailPage() {
     ...MOCK_TRAY_DETAILS[id],
     ...storedTray,
   }
+  const nodeAddress = device?.node.nodeAddress ?? tray.nodeAddress
+  const valveKey = getTrayValveKey(nodeAddress)
+  const isFanEnabled = device?.actuators.cabinet.exhaustFanStatus ?? false
+  const isMistingEnabled = device?.actuators.tray[valveKey] ?? false
+  const isDeviceUnavailable =
+    !device || device.status === 'OFFLINE' || device.status === 'ERROR'
   const chartData = createTrayEnvironmentData(tray.temperature, tray.humidity)
 
   return (
@@ -153,7 +170,10 @@ export function TrayDetailPage() {
         <Space wrap>
           <RoomStatusTag status={tray.status} />
           <Tag icon={<ApiOutlined />} color="processing">
-            ESP32: {tray.deviceId}
+            Gateway Master: {device?.gateway.id ?? tray.deviceId}
+          </Tag>
+          <Tag color="blue">
+            RS485 Node ID: #{nodeAddress}
           </Tag>
         </Space>
       </Flex>
@@ -183,18 +203,23 @@ export function TrayDetailPage() {
             </Col>
 
             <Col span={24}>
-              <Card title="Điều khiển thiết bị">
+              <Card title="Điều khiển ẩm khay">
                 <Flex align="center" justify="space-between" gap={16}>
                   <Space>
                     <SyncOutlined />
-                    <Typography.Text>Quạt thông gió</Typography.Text>
+                    <Typography.Text>Quạt hút (dùng chung toàn tủ)</Typography.Text>
                   </Space>
                   <Switch
                     checked={isFanEnabled}
-                    onChange={setIsFanEnabled}
+                    disabled={isDeviceUnavailable}
+                    onChange={() => {
+                      if (device) {
+                        toggleActuator(device.id, 'exhaustFanStatus')
+                      }
+                    }}
                     checkedChildren="Bật"
                     unCheckedChildren="Tắt"
-                    aria-label="Bật hoặc tắt quạt thông gió"
+                    aria-label="Bật hoặc tắt quạt hút dùng chung"
                   />
                 </Flex>
 
@@ -203,14 +228,21 @@ export function TrayDetailPage() {
                 <Flex align="center" justify="space-between" gap={16}>
                   <Space>
                     <ExperimentOutlined />
-                    <Typography.Text>Bơm sương</Typography.Text>
+                    <Typography.Text>
+                      Van {nodeAddress} + Bơm chính (tưới ẩm khay)
+                    </Typography.Text>
                   </Space>
                   <Switch
                     checked={isMistingEnabled}
-                    onChange={setIsMistingEnabled}
+                    disabled={isDeviceUnavailable}
+                    onChange={(enabled) => {
+                      if (device) {
+                        setTrayMisting(device.id, enabled)
+                      }
+                    }}
                     checkedChildren="Bật"
                     unCheckedChildren="Tắt"
-                    aria-label="Bật hoặc tắt bơm sương"
+                    aria-label={`Bật hoặc tắt Van ${nodeAddress} và Bơm chính`}
                   />
                 </Flex>
               </Card>

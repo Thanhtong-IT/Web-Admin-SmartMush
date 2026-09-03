@@ -26,6 +26,7 @@ import { DeviceMetricsGrid } from './components/DeviceMetricsGrid'
 import { useDeviceStore } from '../../stores/device.store'
 import { useRoomStore } from '../../features/rooms/store/room.store'
 import type {
+  ActuatorKey,
   Device,
   DeviceActuators,
   DeviceStatus,
@@ -61,9 +62,9 @@ function formatTimestamp(timestamp: string | null) {
 
 function getDefaultDeviceFormValues(device: Device): DeviceFormValues {
   return {
-    trayId: device.trayId,
-    ipAddress: device.ipAddress,
-    macAddress: device.macAddress,
+    trayId: device.node.trayId,
+    ipAddress: device.gateway.ipAddress,
+    macAddress: device.gateway.macAddress,
     firmwareVersion: device.firmwareVersion,
     streamUrl: device.camera.streamUrl,
     resolution: device.camera.resolution,
@@ -103,7 +104,7 @@ export function DeviceManagementPage() {
   const availableTrayOptions = useMemo(
     () =>
       trays
-        .filter((tray) => !devices.some((device) => device.trayId === tray.id))
+        .filter((tray) => !devices.some((device) => device.node.trayId === tray.id))
         .map((tray) => ({
           value: tray.id,
           label: `${tray.id} - ${tray.name}`,
@@ -115,12 +116,13 @@ export function DeviceManagementPage() {
     const normalizedSearch = searchText.trim().toLowerCase()
 
     return devices.filter((device) => {
-      const tray = trayById.get(device.trayId)
+      const tray = trayById.get(device.node.trayId)
       const searchableValues = [
-        device.ipAddress,
-        device.macAddress,
+        device.gateway.ipAddress,
+        device.gateway.macAddress,
         device.id,
-        device.trayId,
+        device.node.trayId,
+        device.gateway.id,
         tray?.name ?? '',
       ]
       const matchesSearch = normalizedSearch
@@ -163,7 +165,7 @@ export function DeviceManagementPage() {
     addDevice(values)
     setIsFormOpen(false)
     setEditingDevice(null)
-    message.success('Đã ghép nối thiết bị ESP32 với khay trồng.')
+    message.success('Đã ghép nối Node STM32 với khay trồng qua RS485.')
   }
 
   const handlePing = async (device: Device) => {
@@ -199,7 +201,7 @@ export function DeviceManagementPage() {
 
   const handleToggleActuator = (
     device: Device,
-    actuator: keyof Omit<DeviceActuators, 'mode'>,
+    actuator: ActuatorKey,
   ) => {
     toggleActuator(device.id, actuator)
   }
@@ -222,7 +224,7 @@ export function DeviceManagementPage() {
             Thiết bị IoT & Camera
           </Typography.Title>
           <Typography.Text type="secondary">
-            Quản lý ESP32 Gateway/Node gắn với từng khay trồng
+            Quản lý Gateway Master ESP32-S3 và các Node STM32 trên bus RS485
           </Typography.Text>
         </div>
 
@@ -236,7 +238,7 @@ export function DeviceManagementPage() {
             aria-label="Bật hoặc tắt giả lập telemetry"
           />
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAddDevice}>
-            Ghép nối ESP32
+            Ghép nối Node STM32
           </Button>
         </Space>
       </Flex>
@@ -274,7 +276,7 @@ export function DeviceManagementPage() {
         <Flex vertical gap={20}>
           {visibleDevices.map((device) => {
             const statusConfig = STATUS_CONFIG[device.status]
-            const tray = trayById.get(device.trayId)
+            const tray = trayById.get(device.node.trayId)
             const pingActionKey = `${device.id}:ping`
             const restartActionKey = `${device.id}:restart`
 
@@ -303,16 +305,21 @@ export function DeviceManagementPage() {
                         level={4}
                         style={{ margin: 0 }}
                       >
-                        {tray?.name ?? device.trayId}
+                        {tray?.name ?? device.node.trayId}
                       </Typography.Title>
                       <Tag color={statusConfig.color}>{statusConfig.label}</Tag>
                       <Tag icon={<ApiOutlined />} color="processing">
-                        {device.id}
+                        Node {device.node.nodeAddress}
                       </Tag>
                     </Flex>
                     <Typography.Text type="secondary">
-                      {device.trayId} · Firmware {device.firmwareVersion} · Ping cuối:{' '}
+                      {device.node.trayId} · Địa chỉ RS485 (Node ID: #{device.node.nodeAddress}) ·
+                      {' '}DIP {device.node.dipSwitch} · Firmware {device.firmwareVersion} · Ping cuối:{' '}
                       {formatTimestamp(device.lastPingTimestamp)}
+                    </Typography.Text>
+                    <Typography.Text type="secondary" style={{ display: 'block' }}>
+                      Gateway Master ESP32-S3: {device.gateway.id} · IP {device.gateway.ipAddress} ·
+                      {' '}MAC {device.gateway.macAddress}
                     </Typography.Text>
                   </div>
 
