@@ -1,29 +1,47 @@
-export type RoomStatus = 'ACTIVE' | 'MAINTENANCE' | 'INACTIVE'
-export type TrayStatus = RoomStatus
+export const TIER_IDS = [1, 2, 3, 4] as const
+export type TierId = (typeof TIER_IDS)[number]
 
-export interface CultivationRoom {
-  id: string
-  name: string
-  location: string
-  capacity: number
-  maxCapacity: number
-  currentTraysCount: number
-  status: RoomStatus
-}
+export const TRAY_POSITIONS = [1, 2, 3] as const
+export type TrayPosition = (typeof TRAY_POSITIONS)[number]
+
+export type TrayCode = `T${TierId}-K${TrayPosition}`
+export type NodeId = `node-stm32-0${TierId}`
+export type TrayStatus =
+  | 'empty'
+  | 'rented'
+  | 'harvesting'
+  | 'maintenance'
 
 export interface Tray {
   id: string
-  name: string
-  roomId: string
-  deviceId: string
-  mushroomType: string
+  code: TrayCode
+  tierId: TierId
   status: TrayStatus
-  tenantId: string | null
+  customerId: string | null
+  batchId: string | null
 }
 
-export type Room = CultivationRoom
-export type RoomFormValues = Omit<
-  CultivationRoom,
-  'id' | 'capacity' | 'currentTraysCount'
->
-export type TrayFormValues = Omit<Tray, 'id'>
+export interface TierTelemetry {
+  temperature: number
+  humidity: number
+  co2: number
+  updatedAt: string
+}
+
+export interface TierRelayState {
+  irrigationValves: Record<TrayPosition, boolean>
+  fan: boolean
+}
+
+export interface Tier {
+  tierId: TierId
+  name: string
+  nodeId: NodeId
+  trays: Tray[]
+  telemetry: TierTelemetry
+  relays: TierRelayState
+}
+
+export function getTrayPosition(code: TrayCode): TrayPosition {
+  return Number(code.at(-1)) as TrayPosition
+}

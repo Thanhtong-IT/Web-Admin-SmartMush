@@ -1,193 +1,226 @@
 import { create } from 'zustand'
 import type {
-  CultivationRoom,
-  RoomFormValues,
+  Tier,
+  TierId,
+  TierTelemetry,
   Tray,
-  TrayFormValues,
+  TrayCode,
+  TrayPosition,
+  TrayStatus,
 } from '../types/room.types'
 
-export const MOCK_ROOMS: CultivationRoom[] = [
-  {
-    id: 'ROOM-001',
-    name: 'Phòng nuôi A1',
-    location: 'Tầng 1 · Khu A',
-    capacity: 8,
-    maxCapacity: 8,
-    currentTraysCount: 3,
-    status: 'ACTIVE',
-  },
-  {
-    id: 'ROOM-002',
-    name: 'Phòng nuôi B1',
-    location: 'Tầng 1 · Khu B',
-    capacity: 10,
-    maxCapacity: 10,
-    currentTraysCount: 2,
-    status: 'ACTIVE',
-  },
-  {
-    id: 'ROOM-003',
-    name: 'Phòng cách ly',
-    location: 'Tầng 2 · Khu kỹ thuật',
-    capacity: 6,
-    maxCapacity: 6,
-    currentTraysCount: 1,
-    status: 'MAINTENANCE',
-  },
-]
+interface TraySeed {
+  position: TrayPosition
+  status?: TrayStatus
+  customerId?: string
+  batchId?: string
+}
 
-export const MOCK_TRAYS: Tray[] = [
-  {
-    id: 'TRAY-001',
-    name: 'Khay tầng 1',
-    roomId: 'ROOM-001',
-    deviceId: 'ESP32-A1B2',
-    mushroomType: 'Nấm Bào Ngư Xám',
-    status: 'ACTIVE',
-    tenantId: 'TENANT-001',
-  },
-  {
-    id: 'TRAY-002',
-    name: 'Khay tầng 2',
-    roomId: 'ROOM-001',
-    deviceId: 'ESP32-C3D4',
-    mushroomType: 'Nấm Linh Chi',
-    status: 'ACTIVE',
-    tenantId: 'TENANT-002',
-  },
-  {
-    id: 'TRAY-003',
-    name: 'Khay tầng 3',
-    roomId: 'ROOM-001',
-    deviceId: 'ESP32-E5F6',
-    mushroomType: 'Nấm Mối Đen',
-    status: 'MAINTENANCE',
-    tenantId: null,
-  },
-  {
-    id: 'TRAY-004',
-    name: 'Khay tầng 1',
-    roomId: 'ROOM-002',
-    deviceId: 'ESP32-G7H8',
-    mushroomType: 'Nấm Hoàng Kim',
-    status: 'ACTIVE',
-    tenantId: 'TENANT-003',
-  },
-  {
-    id: 'TRAY-005',
-    name: 'Khay tầng 2',
-    roomId: 'ROOM-002',
-    deviceId: 'ESP32-H9J0',
-    mushroomType: 'Đông Trùng Hạ Thảo',
-    status: 'ACTIVE',
-    tenantId: null,
-  },
-  {
-    id: 'TRAY-006',
-    name: 'Khay kiểm tra',
-    roomId: 'ROOM-003',
-    deviceId: 'ESP32-K1L2',
-    mushroomType: 'Nấm Bào Ngư Xám',
-    status: 'INACTIVE',
-    tenantId: null,
-  },
+function createTray(tierId: TierId, seed: TraySeed): Tray {
+  const code = `T${tierId}-K${seed.position}` as TrayCode
+
+  return {
+    id: code,
+    code,
+    tierId,
+    status: seed.status ?? 'empty',
+    customerId: seed.customerId ?? null,
+    batchId: seed.batchId ?? null,
+  }
+}
+
+function createTier(
+  tierId: TierId,
+  telemetry: Omit<TierTelemetry, 'updatedAt'>,
+  traySeeds: TraySeed[],
+): Tier {
+  return {
+    tierId,
+    name: `Tầng ${tierId}`,
+    nodeId: `node-stm32-0${tierId}`,
+    trays: traySeeds.map((seed) => createTray(tierId, seed)),
+    telemetry: {
+      ...telemetry,
+      updatedAt: '2026-09-12T09:30:00+07:00',
+    },
+    relays: {
+      irrigationValves: { 1: false, 2: false, 3: false },
+      fan: tierId === 2,
+    },
+  }
+}
+
+export const MOCK_TIERS: Tier[] = [
+  createTier(
+    1,
+    { temperature: 25.2, humidity: 88, co2: 630 },
+    [
+      { position: 1, status: 'rented', customerId: 'TENANT-001', batchId: 'BATCH-001' },
+      { position: 2 },
+      { position: 3, status: 'maintenance', batchId: 'BATCH-006' },
+    ],
+  ),
+  createTier(
+    2,
+    { temperature: 26.4, humidity: 82, co2: 780 },
+    [
+      { position: 1, status: 'rented', customerId: 'TENANT-002', batchId: 'BATCH-002' },
+      { position: 2 },
+      { position: 3 },
+    ],
+  ),
+  createTier(
+    3,
+    { temperature: 24.8, humidity: 90, co2: 710 },
+    [
+      { position: 1, status: 'rented', customerId: 'TENANT-004', batchId: 'BATCH-004' },
+      { position: 2 },
+      { position: 3 },
+    ],
+  ),
+  createTier(
+    4,
+    { temperature: 25.9, humidity: 85, co2: 860 },
+    [
+      { position: 1, status: 'harvesting', customerId: 'TENANT-003', batchId: 'BATCH-003' },
+      { position: 2 },
+      { position: 3, status: 'maintenance' },
+    ],
+  ),
 ]
 
 interface RoomState {
-  rooms: CultivationRoom[]
-  trays: Tray[]
-  addRoom: (values: RoomFormValues) => void
-  updateRoom: (id: string, values: RoomFormValues) => void
-  deleteRoom: (id: string) => void
-  addTray: (values: TrayFormValues) => void
-  updateTray: (id: string, values: TrayFormValues) => void
-  deleteTray: (id: string) => void
+  tiers: Tier[]
+  telemetrySimulationEnabled: boolean
+  assignCustomerToTray: (trayId: string, customerId: string) => void
+  releaseCustomerTrays: (customerId: string) => void
+  toggleTierFan: (tierId: TierId) => void
+  toggleTrayValve: (tierId: TierId, position: TrayPosition) => void
+  setTelemetrySimulationEnabled: (enabled: boolean) => void
+  simulateTelemetry: () => void
 }
 
-function getNextId(prefix: string, ids: string[]) {
-  const highestId = ids.reduce((highest, id) => {
-    const match = new RegExp(`^${prefix}-(\\d+)$`).exec(id)
-    const numericId = match ? Number(match[1]) : 0
-
-    return Math.max(highest, numericId)
-  }, 0)
-
-  return `${prefix}-${String(highestId + 1).padStart(3, '0')}`
+export function getAllTrays(tiers: Tier[]) {
+  return tiers.flatMap((tier) => tier.trays)
 }
 
-function syncRoomCounts(rooms: CultivationRoom[], trays: Tray[]) {
-  return rooms.map((room) => ({
-    ...room,
-    currentTraysCount: trays.filter((tray) => tray.roomId === room.id).length,
-  }))
+export function findTray(tiers: Tier[], trayId: string) {
+  return getAllTrays(tiers).find((tray) => tray.id === trayId)
 }
 
-export const useRoomStore = create<RoomState>((set) => ({
-  rooms: MOCK_ROOMS,
-  trays: MOCK_TRAYS,
+function getRandomDelta(range: number) {
+  return (Math.random() - 0.5) * range
+}
 
-  addRoom: (values) =>
+function clamp(value: number, minimum: number, maximum: number) {
+  return Math.max(minimum, Math.min(maximum, value))
+}
+
+export const useRoomStore = create<RoomState>((set, get) => ({
+  tiers: MOCK_TIERS,
+  telemetrySimulationEnabled: false,
+
+  assignCustomerToTray: (trayId, customerId) => {
+    const tray = findTray(get().tiers, trayId)
+
+    if (!tray) {
+      throw new Error('Không tìm thấy khay đã chọn.')
+    }
+
+    const isOwnedByAnotherCustomer =
+      tray.customerId !== null && tray.customerId !== customerId
+    const isUnavailableStatus =
+      (tray.status === 'maintenance' || tray.status === 'harvesting') &&
+      tray.customerId !== customerId
+
+    if (isOwnedByAnotherCustomer || isUnavailableStatus) {
+      throw new Error(`${tray.code} hiện không thể gán cho khách thuê.`)
+    }
+
     set((state) => ({
-      rooms: [
-        {
-          ...values,
-          id: getNextId(
-            'ROOM',
-            state.rooms.map((room) => room.id),
-          ),
-          capacity: values.maxCapacity,
-          currentTraysCount: 0,
-        },
-        ...state.rooms,
-      ],
+      tiers: state.tiers.map((tier) => ({
+        ...tier,
+        trays: tier.trays.map((item) => {
+          if (item.id === trayId) {
+            return { ...item, customerId, status: 'rented' }
+          }
+
+          if (item.customerId === customerId) {
+            return {
+              ...item,
+              customerId: null,
+              status: item.batchId ? 'harvesting' : 'empty',
+            }
+          }
+
+          return item
+        }),
+      })),
+    }))
+  },
+
+  releaseCustomerTrays: (customerId) =>
+    set((state) => ({
+      tiers: state.tiers.map((tier) => ({
+        ...tier,
+        trays: tier.trays.map((tray) =>
+          tray.customerId === customerId
+            ? {
+                ...tray,
+                customerId: null,
+                status: tray.batchId ? 'harvesting' : 'empty',
+              }
+            : tray,
+        ),
+      })),
     })),
 
-  updateRoom: (id, values) =>
+  toggleTierFan: (tierId) =>
     set((state) => ({
-      rooms: state.rooms.map((room) =>
-        room.id === id
-          ? { ...room, ...values, capacity: values.maxCapacity }
-          : room,
+      tiers: state.tiers.map((tier) =>
+        tier.tierId === tierId
+          ? { ...tier, relays: { ...tier.relays, fan: !tier.relays.fan } }
+          : tier,
       ),
     })),
 
-  deleteRoom: (id) =>
-    set((state) => {
-      const trays = state.trays.filter((tray) => tray.roomId !== id)
-      const rooms = state.rooms.filter((room) => room.id !== id)
+  toggleTrayValve: (tierId, position) =>
+    set((state) => ({
+      tiers: state.tiers.map((tier) =>
+        tier.tierId === tierId
+          ? {
+              ...tier,
+              relays: {
+                ...tier.relays,
+                irrigationValves: {
+                  ...tier.relays.irrigationValves,
+                  [position]: !tier.relays.irrigationValves[position],
+                },
+              },
+            }
+          : tier,
+      ),
+    })),
 
-      return { trays, rooms: syncRoomCounts(rooms, trays) }
-    }),
+  setTelemetrySimulationEnabled: (enabled) =>
+    set({ telemetrySimulationEnabled: enabled }),
 
-  addTray: (values) =>
-    set((state) => {
-      const trays = [
-        {
-          ...values,
-          id: getNextId(
-            'TRAY',
-            state.trays.map((tray) => tray.id),
+  simulateTelemetry: () =>
+    set((state) => ({
+      tiers: state.tiers.map((tier) => ({
+        ...tier,
+        telemetry: {
+          temperature: Number(
+            clamp(tier.telemetry.temperature + getRandomDelta(0.6), 18, 34).toFixed(1),
           ),
+          humidity: Math.round(
+            clamp(tier.telemetry.humidity + getRandomDelta(3), 55, 99),
+          ),
+          co2: Math.round(
+            clamp(tier.telemetry.co2 + getRandomDelta(60), 350, 1600),
+          ),
+          updatedAt: new Date().toISOString(),
         },
-        ...state.trays,
-      ]
-
-      return { trays, rooms: syncRoomCounts(state.rooms, trays) }
-    }),
-
-  updateTray: (id, values) =>
-    set((state) => {
-      const trays = state.trays.map((tray) =>
-        tray.id === id ? { ...tray, ...values } : tray,
-      )
-
-      return { trays, rooms: syncRoomCounts(state.rooms, trays) }
-    }),
-
-  deleteTray: (id) =>
-    set((state) => {
-      const trays = state.trays.filter((tray) => tray.id !== id)
-
-      return { trays, rooms: syncRoomCounts(state.rooms, trays) }
-    }),
+      })),
+    })),
 }))

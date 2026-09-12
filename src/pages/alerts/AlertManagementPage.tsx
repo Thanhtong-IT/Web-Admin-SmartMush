@@ -40,7 +40,7 @@ const CATEGORY_OPTIONS = [
   { value: 'TEMPERATURE', label: 'Nhiệt độ' },
   { value: 'HUMIDITY', label: 'Độ ẩm' },
   { value: 'CO2', label: 'CO₂' },
-  { value: 'DEVICE_OFFLINE', label: 'ESP32 mất kết nối' },
+  { value: 'DEVICE_OFFLINE', label: 'Node STM32 mất kết nối' },
   { value: 'HARDWARE_FAULT', label: 'Lỗi phần cứng' },
 ] satisfies Array<{ value: AlertCategory; label: string }>
 
@@ -182,7 +182,7 @@ export function AlertManagementPage() {
             Cảnh báo vi khí hậu
           </Typography.Title>
           <Typography.Text type="secondary">
-            Theo dõi sự cố môi trường, ESP32 và phần cứng theo từng khay
+            Theo dõi sự cố môi trường và Node STM32 theo từng tầng, từng khay
           </Typography.Text>
         </div>
 
@@ -204,7 +204,7 @@ export function AlertManagementPage() {
         <Input
           allowClear
           prefix={<SearchOutlined />}
-          placeholder="Tìm nội dung, tên khay, mã ESP32"
+          placeholder="Tìm nội dung, mã khay hoặc Node STM32"
           value={searchText}
           onChange={(event) => setSearchText(event.target.value)}
           style={{ width: 320, maxWidth: '100%' }}

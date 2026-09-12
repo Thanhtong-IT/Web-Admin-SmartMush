@@ -2,8 +2,8 @@ import { useMemo, useState } from 'react'
 import { SettingOutlined } from '@ant-design/icons'
 import { Flex, Tabs, Tag, Typography, message } from 'antd'
 import { useAuthStore } from '../../features/auth/store/auth.store'
-import { useRoomStore } from '../../features/rooms/store/room.store'
 import { useTenantStore } from '../../features/tenants/store/tenant.store'
+import { useCultivationStore } from '../../stores/cultivation.store'
 import { useSettingStore } from '../../stores/setting.store'
 import { NotificationConfigTab } from './components/NotificationConfigTab'
 import { SystemConfigTab } from './components/SystemConfigTab'
@@ -22,8 +22,8 @@ function normalizeRole(role: string | undefined) {
 
 export function SettingsPage() {
   const authUser = useAuthStore((state) => state.user)
-  const trays = useRoomStore((state) => state.trays)
   const tenants = useTenantStore((state) => state.tenants)
+  const batches = useCultivationStore((state) => state.batches)
   const addProfile = useSettingStore((state) => state.addThresholdProfile)
   const updateProfile = useSettingStore(
     (state) => state.updateThresholdProfile,
@@ -45,10 +45,14 @@ export function SettingsPage() {
       .filter((tenant) => tenant.name === authUser.name)
       .map((tenant) => tenant.assignedTrayId)
 
-    return trays
-      .filter((tray) => assignedTrayIds.includes(tray.id))
-      .map((tray) => tray.mushroomType)
-  }, [authUser, role, tenants, trays])
+    return [
+      ...new Set(
+        batches
+          .filter((batch) => assignedTrayIds.includes(batch.trayId))
+          .map((batch) => batch.mushroomType),
+      ),
+    ]
+  }, [authUser, batches, role, tenants])
 
   const handleAddProfile = () => {
     setEditingProfile(null)

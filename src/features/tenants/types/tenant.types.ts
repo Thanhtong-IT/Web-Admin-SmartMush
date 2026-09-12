@@ -8,3 +8,4 @@ export interface Tenant {
 }
 
 export type TenantFormValues = Omit<Tenant, 'id' | 'startDate'>
+export type Customer = Tenant

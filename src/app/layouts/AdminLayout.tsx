@@ -9,6 +9,7 @@ import {
   TagsOutlined,
   TeamOutlined,
   UserOutlined,
+  VideoCameraOutlined,
 } from '@ant-design/icons'
 import { Layout, Menu, Typography } from 'antd'
 import type { MenuProps } from 'antd'
@@ -33,6 +34,11 @@ const MENU_ITEMS: MenuProps['items'] = [
     label: 'Thiết bị IoT',
   },
   {
+    key: '/camera',
+    icon: <VideoCameraOutlined />,
+    label: 'Camera toàn cảnh',
+  },
+  {
     key: '/packages',
     icon: <TagsOutlined />,
     label: 'Gói cước thuê',
@@ -53,7 +59,7 @@ const MENU_ITEMS: MenuProps['items'] = [
     label: 'Báo cáo & Phân tích',
   },
   {
-    key: '/tenants',
+    key: '/customers',
     icon: <UserOutlined />,
     label: 'Quản lý khách thuê',
   },
@@ -69,29 +75,34 @@ const MENU_ITEMS: MenuProps['items'] = [
   },
 ]
 
+function getSelectedMenuKey(pathname: string) {
+  if (pathname.startsWith('/rooms') || pathname.startsWith('/trays')) {
+    return '/rooms'
+  }
+
+  if (pathname.startsWith('/customers') || pathname.startsWith('/tenants')) {
+    return '/customers'
+  }
+
+  const matchingPath = [
+    '/devices',
+    '/camera',
+    '/packages',
+    '/cultivation',
+    '/alerts',
+    '/reports',
+    '/users',
+    '/settings',
+  ].find((path) => pathname.startsWith(path))
+
+  return matchingPath ?? '/'
+}
+
 export function AdminLayout() {
   const location = useLocation()
   const navigate = useNavigate()
 
-  const selectedMenuKey = location.pathname.startsWith('/rooms')
-    ? '/rooms'
-    : location.pathname.startsWith('/devices')
-      ? '/devices'
-      : location.pathname.startsWith('/packages')
-        ? '/packages'
-          : location.pathname.startsWith('/cultivation')
-          ? '/cultivation'
-          : location.pathname.startsWith('/alerts')
-            ? '/alerts'
-            : location.pathname.startsWith('/reports')
-              ? '/reports'
-          : location.pathname.startsWith('/tenants')
-            ? '/tenants'
-            : location.pathname.startsWith('/users')
-              ? '/users'
-              : location.pathname.startsWith('/settings')
-                ? '/settings'
-                : '/'
+  const selectedMenuKey = getSelectedMenuKey(location.pathname)
 
   return (
     <Layout style={{ minHeight: '100dvh' }}>

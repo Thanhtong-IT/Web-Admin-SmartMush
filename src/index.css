@@ -24,3 +24,368 @@ textarea,
 select {
   font: inherit;
 }
+
+.rack-shell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 6px solid #35423a;
+  border-top-width: 12px;
+  border-bottom-width: 12px;
+  border-radius: 8px;
+  background: #dfe6e1;
+  box-shadow: inset 0 0 0 1px #bcc8c0;
+}
+
+.rack-tier {
+  padding: 14px;
+  border: 1px solid #a8b7ad;
+  border-bottom: 8px solid #53645a;
+  background: #f9fbfa;
+}
+
+.rack-tier-header {
+  margin-bottom: 12px;
+}
+
+.rack-tray-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.rack-tray {
+  min-width: 0;
+  min-height: 104px;
+  padding: 14px;
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+  border-left-width: 5px;
+  border-radius: 6px;
+  color: #1f2937;
+  background: #ffffff;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.rack-tray:hover,
+.rack-tray:focus-visible,
+.rack-tray[data-selected='true'] {
+  border-color: #1677ff;
+  box-shadow: 0 0 0 2px rgb(22 119 255 / 18%);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.rack-tray--empty {
+  border-left-color: #94a3b8;
+  background: #ffffff;
+}
+
+.rack-tray--rented {
+  border-left-color: #1677ff;
+  background: #f0f7ff;
+}
+
+.rack-tray--harvesting {
+  border-left-color: #d97706;
+  background: #fffbeb;
+}
+
+.rack-tray--maintenance {
+  border-left-color: #dc2626;
+  background: #fff1f0;
+}
+
+.rack-tray-code {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.rack-tray-meta {
+  display: block;
+  margin-top: 18px;
+  overflow: hidden;
+  color: #64748b;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tray-drawer-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.tray-relay-panel {
+  padding: 16px;
+  border: 1px solid #d9e2dc;
+  border-radius: 6px;
+  background: #f7faf8;
+}
+
+.rs485-topology {
+  display: grid;
+  grid-template-columns: 160px minmax(90px, 1fr) minmax(420px, 3fr);
+  align-items: center;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.rs485-master,
+.rs485-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 92px;
+  gap: 4px;
+  border: 1px solid #94a3b8;
+  border-radius: 6px;
+  background: #f8fafc;
+}
+
+.rs485-master > span,
+.rs485-node > span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.rs485-bus-line {
+  position: relative;
+  height: 4px;
+  background: #1677ff;
+}
+
+.rs485-bus-line::after {
+  position: absolute;
+  top: -5px;
+  right: -1px;
+  width: 0;
+  height: 0;
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+  border-left: 10px solid #1677ff;
+  content: '';
+}
+
+.rs485-bus-line > span {
+  position: absolute;
+  top: -24px;
+  width: 100%;
+  color: #2563eb;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.rs485-node-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.device-tier-section {
+  padding: 20px;
+  border: 1px solid #d7e0da;
+  border-left: 5px solid #386641;
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.camera-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: 1px solid #33443a;
+  border-radius: 6px;
+  color: #ffffff;
+  background: #121a16;
+}
+
+.camera-rack-overview {
+  position: absolute;
+  inset: 7% 13%;
+  display: grid;
+  grid-template-rows: repeat(4, minmax(0, 1fr));
+  border: 10px solid #5b665f;
+  border-top-width: 14px;
+  border-bottom-width: 14px;
+  background: #202b25;
+  box-shadow: 0 18px 40px rgb(0 0 0 / 45%);
+}
+
+.camera-tier-row {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  min-height: 0;
+  border-bottom: 7px solid #69756d;
+}
+
+.camera-tier-row:last-child {
+  border-bottom: 0;
+}
+
+.camera-tier-label {
+  display: flex;
+  align-items: center;
+  width: 72px;
+  padding: 8px;
+  color: #d7e7db;
+  font-size: 12px;
+  font-weight: 700;
+  background: rgb(7 17 11 / 82%);
+}
+
+.camera-tray-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  flex: 1;
+  gap: 3%;
+  align-items: end;
+  padding: 2% 4%;
+}
+
+.camera-tray {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 72%;
+  min-height: 24px;
+  padding: 5px;
+  border: 1px solid #7b8d81;
+  border-top: 8px solid #486052;
+  color: #e9f2ec;
+  font-size: 11px;
+  background: #33483b;
+  box-shadow: inset 0 -10px 16px rgb(0 0 0 / 24%);
+}
+
+.camera-tray[data-status='rented'] {
+  border-top-color: #4096ff;
+  background: #315744;
+}
+
+.camera-tray[data-status='harvesting'] {
+  border-top-color: #eab308;
+  background: #5c5936;
+}
+
+.camera-tray[data-status='maintenance'] {
+  border-top-color: #ef4444;
+  background: #593a38;
+}
+
+.camera-hud-top,
+.camera-hud-bottom {
+  position: absolute;
+  right: 16px;
+  left: 16px;
+  z-index: 2;
+}
+
+.camera-hud-top {
+  top: 16px;
+}
+
+.camera-hud-bottom {
+  bottom: 16px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  color: #f8fafc;
+  background: rgb(7 17 11 / 72%);
+}
+
+.camera-offline {
+  height: 100%;
+  color: #cbd5e1;
+  font-size: 32px;
+}
+
+@media (max-width: 640px) {
+  .rack-shell {
+    padding: 10px;
+  }
+
+  .rack-tier {
+    padding: 10px;
+  }
+
+  .rack-tray-grid {
+    gap: 6px;
+  }
+
+  .rack-tray {
+    min-height: 116px;
+    padding: 9px;
+  }
+
+  .rack-tray-code {
+    font-size: 15px;
+  }
+
+  .rack-tray-meta {
+    margin-top: 12px;
+    white-space: normal;
+  }
+
+  .tray-drawer-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .camera-rack-overview {
+    inset: 12% 5%;
+    border-width: 6px;
+  }
+
+  .camera-tier-label {
+    width: 54px;
+    padding: 4px;
+    font-size: 10px;
+  }
+
+  .camera-hud-bottom {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 900px) {
+  .rs485-topology {
+    grid-template-columns: 1fr;
+  }
+
+  .rs485-bus-line {
+    width: 4px;
+    height: 44px;
+    margin: 0 auto;
+  }
+
+  .rs485-bus-line::after {
+    top: auto;
+    right: -5px;
+    bottom: -1px;
+    border-top: 10px solid #1677ff;
+    border-right: 7px solid transparent;
+    border-bottom: 0;
+    border-left: 7px solid transparent;
+  }
+
+  .rs485-bus-line > span {
+    top: 12px;
+    left: 12px;
+    width: max-content;
+  }
+
+  .rs485-node-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

@@ -1,211 +1,88 @@
-import { useMemo, useState } from 'react'
-import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons'
 import {
-  Button,
-  Flex,
-  Modal,
-  Select,
-  Space,
-  Table,
-  Tooltip,
-  Typography,
-  message,
-} from 'antd'
-import type { TableColumnsType } from 'antd'
-import { useRoomStore } from '../../../stores/room.store'
-import type { CultivationRoom, RoomFormValues } from '../../../types/room.types'
-import { RoomFormModal } from '../components/RoomFormModal'
-import { RoomStatusTag } from '../components/RoomStatusTag'
-import { RoomTable } from '../components/RoomTable'
+  ApiOutlined,
+  CheckCircleOutlined,
+  InboxOutlined,
+  WarningOutlined,
+} from '@ant-design/icons'
+import { Card, Col, Flex, Row, Statistic, Tag, Typography } from 'antd'
+import { useMemo } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { getAllTrays, useRoomStore } from '../../../stores/room.store'
+import type { TrayStatus } from '../../../types/room.types'
+import { RackView } from '../components/RackView'
+import { TrayDetailDrawer } from '../components/TrayDetailDrawer'
+import { TRAY_STATUS_CONFIG } from '../components/tray-status.config'
+
+const STATUS_ORDER: TrayStatus[] = [
+  'empty',
+  'rented',
+  'harvesting',
+  'maintenance',
+]
 
 export function RoomListPage() {
-  const rooms = useRoomStore((state) => state.rooms)
-  const addRoom = useRoomStore((state) => state.addRoom)
-  const updateRoom = useRoomStore((state) => state.updateRoom)
-  const deleteRoom = useRoomStore((state) => state.deleteRoom)
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [editingRoom, setEditingRoom] = useState<CultivationRoom | null>(null)
-  const [selectedRoomId, setSelectedRoomId] = useState<string | undefined>()
+  const tiers = useRoomStore((state) => state.tiers)
+  const navigate = useNavigate()
+  const { id = null } = useParams<{ id: string }>()
 
-  const roomOptions = useMemo(
-    () => [
-      { value: 'ALL', label: 'Tất cả phòng nuôi' },
-      ...rooms.map((room) => ({
-        value: room.id,
-        label: `${room.id} - ${room.name}`,
-      })),
-    ],
-    [rooms],
-  )
+  const summary = useMemo(() => {
+    const trays = getAllTrays(tiers)
 
-  const handleAddRoom = () => {
-    setEditingRoom(null)
-    setIsModalOpen(true)
-  }
-
-  const handleEditRoom = (room: CultivationRoom) => {
-    setEditingRoom(room)
-    setIsModalOpen(true)
-  }
-
-  const handleSubmit = async (values: RoomFormValues) => {
-    await new Promise((resolve) => window.setTimeout(resolve, 300))
-
-    if (editingRoom) {
-      updateRoom(editingRoom.id, values)
-      message.success('Đã cập nhật phòng nuôi.')
-    } else {
-      addRoom(values)
-      message.success('Đã thêm phòng nuôi mới.')
+    return {
+      total: trays.length,
+      empty: trays.filter((tray) => tray.status === 'empty').length,
+      occupied: trays.filter(
+        (tray) => tray.status === 'rented' || tray.status === 'harvesting',
+      ).length,
+      attention: trays.filter((tray) => tray.status === 'maintenance').length,
     }
-
-    setIsModalOpen(false)
-    setEditingRoom(null)
-  }
-
-  const roomColumns = useMemo<TableColumnsType<CultivationRoom>>(
-    () => [
-      {
-        title: 'Mã phòng',
-        dataIndex: 'id',
-        key: 'id',
-        width: 140,
-      },
-      {
-        title: 'Tên phòng',
-        dataIndex: 'name',
-        key: 'name',
-      },
-      {
-        title: 'Vị trí',
-        dataIndex: 'location',
-        key: 'location',
-        width: 200,
-      },
-      {
-        title: 'Số khay',
-        key: 'trayCount',
-        width: 130,
-        render: (_, room) => `${room.currentTraysCount} / ${room.maxCapacity}`,
-      },
-      {
-        title: 'Trạng thái',
-        dataIndex: 'status',
-        key: 'status',
-        width: 150,
-        render: (status: CultivationRoom['status']) => (
-          <RoomStatusTag status={status} />
-        ),
-      },
-      {
-        title: 'Hành động',
-        key: 'actions',
-        width: 110,
-        align: 'right',
-        render: (_, room) => (
-          <Space size={4}>
-            <Tooltip title="Sửa phòng">
-              <Button
-                type="text"
-                icon={<EditOutlined />}
-                onClick={() => handleEditRoom(room)}
-                aria-label={`Sửa ${room.name}`}
-              />
-            </Tooltip>
-            <Tooltip title="Xóa phòng và các khay bên trong">
-              <Button
-                type="text"
-                danger
-                icon={<DeleteOutlined />}
-                onClick={() =>
-                  Modal.confirm({
-                    title: 'Xóa phòng nuôi?',
-                    content: `Các khay thuộc ${room.name} cũng sẽ bị xóa.`,
-                    okText: 'Xóa',
-                    cancelText: 'Hủy',
-                    okButtonProps: { danger: true },
-                    onOk: () => {
-                      deleteRoom(room.id)
-                      if (selectedRoomId === room.id) {
-                        setSelectedRoomId(undefined)
-                      }
-                      message.success('Đã xóa phòng nuôi.')
-                    },
-                  })
-                }
-                aria-label={`Xóa ${room.name}`}
-              />
-            </Tooltip>
-          </Space>
-        ),
-      },
-    ],
-    [deleteRoom, selectedRoomId],
-  )
+  }, [tiers])
 
   return (
     <div>
-      <Flex
-        align="center"
-        justify="space-between"
-        gap={16}
-        wrap
-        style={{ marginBottom: 20 }}
-      >
+      <Flex align="flex-start" justify="space-between" gap={16} wrap style={{ marginBottom: 20 }}>
         <div>
           <Typography.Title level={3} style={{ margin: 0 }}>
-            Quản lý phòng nuôi
+            Kệ nấm 4 tầng
           </Typography.Title>
           <Typography.Text type="secondary">
-            Quản lý phòng và các khay trồng thuộc từng khu vực
+            12 khay · 3 khay mỗi tầng · 1 Node STM32 phụ trách mỗi tầng
           </Typography.Text>
         </div>
 
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleAddRoom}>
-          Thêm phòng nuôi
-        </Button>
+        <Flex gap={6} wrap>
+          {STATUS_ORDER.map((status) => (
+            <Tag key={status} color={TRAY_STATUS_CONFIG[status].color}>
+              {TRAY_STATUS_CONFIG[status].label}
+            </Tag>
+          ))}
+        </Flex>
       </Flex>
 
-      <Table<CultivationRoom>
-        rowKey="id"
-        columns={roomColumns}
-        dataSource={rooms}
-        pagination={false}
-        scroll={{ x: 760 }}
-        style={{ marginBottom: 24 }}
+      <Row gutter={[12, 12]} style={{ marginBottom: 20 }}>
+        <Col xs={12} lg={6}>
+          <Card size="small"><Statistic title="Tổng khay" value={summary.total} prefix={<ApiOutlined />} /></Card>
+        </Col>
+        <Col xs={12} lg={6}>
+          <Card size="small"><Statistic title="Còn trống" value={summary.empty} prefix={<InboxOutlined />} /></Card>
+        </Col>
+        <Col xs={12} lg={6}>
+          <Card size="small"><Statistic title="Đang vận hành" value={summary.occupied} prefix={<CheckCircleOutlined />} /></Card>
+        </Col>
+        <Col xs={12} lg={6}>
+          <Card size="small"><Statistic title="Cần chú ý" value={summary.attention} prefix={<WarningOutlined />} /></Card>
+        </Col>
+      </Row>
+
+      <RackView
+        tiers={tiers}
+        selectedTrayId={id}
+        onSelectTray={(tray) => navigate(`/rooms/${tray.id}`)}
       />
 
-      <Flex align="center" gap={12} wrap style={{ marginBottom: 16 }}>
-        <Typography.Text strong>Lọc khay theo phòng:</Typography.Text>
-        <Select
-          value={selectedRoomId ?? 'ALL'}
-          options={roomOptions}
-          onChange={(value: string) =>
-            setSelectedRoomId(value === 'ALL' ? undefined : value)
-          }
-          style={{ width: 280, maxWidth: '100%' }}
-        />
-      </Flex>
-
-      <RoomTable roomId={selectedRoomId} />
-
-      <RoomFormModal
-        open={isModalOpen}
-        initialValues={
-          editingRoom
-            ? {
-                name: editingRoom.name,
-                location: editingRoom.location,
-                maxCapacity: editingRoom.maxCapacity,
-                status: editingRoom.status,
-              }
-            : undefined
-        }
-        onCancel={() => {
-          setIsModalOpen(false)
-          setEditingRoom(null)
-        }}
-        onSubmit={handleSubmit}
+      <TrayDetailDrawer
+        trayId={id}
+        onClose={() => navigate('/rooms', { replace: true })}
       />
     </div>
   )

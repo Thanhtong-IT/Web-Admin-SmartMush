@@ -1,149 +1,73 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   ApiOutlined,
-  LinkOutlined,
-  PlusOutlined,
+  BulbOutlined,
+  CloudOutlined,
   ReloadOutlined,
+  ThunderboltOutlined,
   WifiOutlined,
 } from '@ant-design/icons'
 import {
   Button,
-  Empty,
+  Card,
   Flex,
-  Input,
-  Pagination,
-  Select,
   Space,
   Switch,
   Tag,
   Typography,
   message,
 } from 'antd'
-import { ActuatorControlPanel } from './components/ActuatorControlPanel'
-import { CameraStreamCard } from './components/CameraStreamCard'
-import { DeviceFormModal } from './components/DeviceFormModal'
-import { DeviceMetricsGrid } from './components/DeviceMetricsGrid'
 import { useDeviceStore } from '../../stores/device.store'
-import { useRoomStore } from '../../features/rooms/store/room.store'
+import { useRoomStore } from '../../stores/room.store'
 import type {
-  ActuatorKey,
-  Device,
-  DeviceActuators,
   DeviceStatus,
-  DeviceFormValues,
+  GatewayRelayKey,
+  Rs485Node,
 } from '../../types/device.types'
-
-const STATUS_OPTIONS = [
-  { value: 'ONLINE', label: 'Online' },
-  { value: 'OFFLINE', label: 'Offline' },
-  { value: 'WARNING', label: 'Cảnh báo' },
-  { value: 'ERROR', label: 'Lỗi' },
-] satisfies Array<{ value: DeviceStatus; label: string }>
+import { TRAY_POSITIONS } from '../../types/room.types'
+import { DeviceMetricsGrid } from './components/DeviceMetricsGrid'
 
 const STATUS_CONFIG: Record<
   DeviceStatus,
   { color: string; label: string }
 > = {
-  ONLINE: { color: 'success', label: 'Online' },
-  OFFLINE: { color: 'default', label: 'Offline' },
-  WARNING: { color: 'warning', label: 'Cảnh báo' },
+  ONLINE: { color: 'success', label: 'Ổn định' },
+  OFFLINE: { color: 'default', label: 'Mất kết nối' },
+  WARNING: { color: 'warning', label: 'Đường truyền yếu' },
   ERROR: { color: 'error', label: 'Lỗi' },
 }
 
-const PAGE_SIZE = 4
+const GATEWAY_RELAYS: Array<{
+  key: GatewayRelayKey
+  label: string
+  icon: React.ReactNode
+}> = [
+  { key: 'mainPump', label: 'Bơm tưới tổng', icon: <CloudOutlined /> },
+  { key: 'exhaustFan', label: 'Quạt hút tổng', icon: <ThunderboltOutlined /> },
+  { key: 'rackLighting', label: 'Đèn toàn kệ', icon: <BulbOutlined /> },
+]
 
-function formatTimestamp(timestamp: string | null) {
-  if (!timestamp) {
-    return 'Chưa có dữ liệu'
-  }
-
+function formatTimestamp(timestamp: string) {
   return new Date(timestamp).toLocaleString('vi-VN')
 }
 
-function getDefaultDeviceFormValues(device: Device): DeviceFormValues {
-  return {
-    trayId: device.node.trayId,
-    ipAddress: device.gateway.ipAddress,
-    macAddress: device.gateway.macAddress,
-    firmwareVersion: device.firmwareVersion,
-    streamUrl: device.camera.streamUrl,
-    resolution: device.camera.resolution,
-    fps: device.camera.fps,
-  }
-}
-
 export function DeviceManagementPage() {
-  const devices = useDeviceStore((state) => state.devices)
-  const telemetrySimulationEnabled = useDeviceStore(
+  const gateway = useDeviceStore((state) => state.gateway)
+  const nodes = useDeviceStore((state) => state.nodes)
+  const toggleGatewayRelay = useDeviceStore((state) => state.toggleGatewayRelay)
+  const pingNode = useDeviceStore((state) => state.pingNode)
+  const restartNode = useDeviceStore((state) => state.restartNode)
+  const tiers = useRoomStore((state) => state.tiers)
+  const telemetrySimulationEnabled = useRoomStore(
     (state) => state.telemetrySimulationEnabled,
   )
-  const addDevice = useDeviceStore((state) => state.addDevice)
-  const setTelemetrySimulationEnabled = useDeviceStore(
+  const setTelemetrySimulationEnabled = useRoomStore(
     (state) => state.setTelemetrySimulationEnabled,
   )
-  const simulateTelemetry = useDeviceStore((state) => state.simulateTelemetry)
-  const toggleActuator = useDeviceStore((state) => state.toggleActuator)
-  const setControlMode = useDeviceStore((state) => state.setControlMode)
-  const pingDevice = useDeviceStore((state) => state.pingDevice)
-  const restartDevice = useDeviceStore((state) => state.restartDevice)
-  const takeSnapshot = useDeviceStore((state) => state.takeSnapshot)
-  const trays = useRoomStore((state) => state.trays)
-
-  const [searchText, setSearchText] = useState('')
-  const [statusFilter, setStatusFilter] = useState<DeviceStatus | undefined>()
-  const [currentPage, setCurrentPage] = useState(1)
-  const [isFormOpen, setIsFormOpen] = useState(false)
-  const [editingDevice, setEditingDevice] = useState<Device | null>(null)
+  const simulateTelemetry = useRoomStore((state) => state.simulateTelemetry)
+  const toggleTierFan = useRoomStore((state) => state.toggleTierFan)
+  const toggleTrayValve = useRoomStore((state) => state.toggleTrayValve)
   const [pendingAction, setPendingAction] = useState<string | null>(null)
-
-  const trayById = useMemo(
-    () => new Map(trays.map((tray) => [tray.id, tray])),
-    [trays],
-  )
-
-  const availableTrayOptions = useMemo(
-    () =>
-      trays
-        .filter((tray) => !devices.some((device) => device.node.trayId === tray.id))
-        .map((tray) => ({
-          value: tray.id,
-          label: `${tray.id} - ${tray.name}`,
-        })),
-    [devices, trays],
-  )
-
-  const filteredDevices = useMemo(() => {
-    const normalizedSearch = searchText.trim().toLowerCase()
-
-    return devices.filter((device) => {
-      const tray = trayById.get(device.node.trayId)
-      const searchableValues = [
-        device.gateway.ipAddress,
-        device.gateway.macAddress,
-        device.id,
-        device.node.trayId,
-        device.gateway.id,
-        tray?.name ?? '',
-      ]
-      const matchesSearch = normalizedSearch
-        ? searchableValues.some((value) =>
-            value.toLowerCase().includes(normalizedSearch),
-          )
-        : true
-      const matchesStatus = statusFilter
-        ? device.status === statusFilter
-        : true
-
-      return matchesSearch && matchesStatus
-    })
-  }, [devices, searchText, statusFilter, trayById])
-
-  const maxPage = Math.max(1, Math.ceil(filteredDevices.length / PAGE_SIZE))
-  const visiblePage = Math.min(currentPage, maxPage)
-  const visibleDevices = filteredDevices.slice(
-    (visiblePage - 1) * PAGE_SIZE,
-    visiblePage * PAGE_SIZE,
-  )
 
   useEffect(() => {
     if (!telemetrySimulationEnabled) {
@@ -155,248 +79,194 @@ export function DeviceManagementPage() {
     return () => window.clearInterval(timer)
   }, [simulateTelemetry, telemetrySimulationEnabled])
 
-  const handleAddDevice = () => {
-    setEditingDevice(null)
-    setIsFormOpen(true)
-  }
-
-  const handleSubmit = async (values: DeviceFormValues) => {
-    await new Promise((resolve) => window.setTimeout(resolve, 400))
-    addDevice(values)
-    setIsFormOpen(false)
-    setEditingDevice(null)
-    message.success('Đã ghép nối Node STM32 với khay trồng qua RS485.')
-  }
-
-  const handlePing = async (device: Device) => {
-    const actionKey = `${device.id}:ping`
+  const handleNodeAction = async (
+    node: Rs485Node,
+    action: 'ping' | 'restart',
+  ) => {
+    const actionKey = `${node.id}:${action}`
     setPendingAction(actionKey)
 
     try {
       await new Promise((resolve) => window.setTimeout(resolve, 350))
-      pingDevice(device.id)
-      message.success(`Đã ping ${device.id}.`)
+
+      if (action === 'ping') {
+        pingNode(node.id)
+      } else {
+        restartNode(node.id)
+      }
+
+      message.success(
+        action === 'ping'
+          ? `Đã kiểm tra kết nối ${node.id}.`
+          : `Đã khởi động lại ${node.id}.`,
+      )
     } finally {
       setPendingAction(null)
     }
-  }
-
-  const handleRestart = async (device: Device) => {
-    const actionKey = `${device.id}:restart`
-    setPendingAction(actionKey)
-
-    try {
-      await new Promise((resolve) => window.setTimeout(resolve, 500))
-      restartDevice(device.id)
-      message.success(`Đã gửi lệnh khởi động lại ${device.id}.`)
-    } finally {
-      setPendingAction(null)
-    }
-  }
-
-  const handleSnapshot = (device: Device) => {
-    takeSnapshot(device.id)
-    message.success(`Đã chụp snapshot từ ${device.id}.`)
-  }
-
-  const handleToggleActuator = (
-    device: Device,
-    actuator: ActuatorKey,
-  ) => {
-    toggleActuator(device.id, actuator)
-  }
-
-  const handleModeChange = (device: Device, mode: DeviceActuators['mode']) => {
-    setControlMode(device.id, mode)
   }
 
   return (
     <div>
-      <Flex
-        align="center"
-        justify="space-between"
-        gap={16}
-        wrap
-        style={{ marginBottom: 20 }}
-      >
+      <Flex align="flex-start" justify="space-between" gap={16} wrap style={{ marginBottom: 20 }}>
         <div>
           <Typography.Title level={3} style={{ margin: 0 }}>
-            Thiết bị IoT & Camera
+            Gateway & mạng RS485
           </Typography.Title>
           <Typography.Text type="secondary">
-            Quản lý Gateway Master ESP32-S3 và các Node STM32 trên bus RS485
+            1 ESP32-S3 Master · 4 STM32 Slave · mỗi Node quản lý cố định một tầng
           </Typography.Text>
         </div>
 
-        <Space wrap>
+        <Space>
           <Typography.Text>Giả lập telemetry</Typography.Text>
           <Switch
             checked={telemetrySimulationEnabled}
             onChange={setTelemetrySimulationEnabled}
             checkedChildren="Bật"
             unCheckedChildren="Tắt"
-            aria-label="Bật hoặc tắt giả lập telemetry"
           />
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAddDevice}>
-            Ghép nối Node STM32
-          </Button>
         </Space>
       </Flex>
 
-      <Flex gap={12} wrap style={{ marginBottom: 20 }}>
-        <Input
-          allowClear
-          prefix={<LinkOutlined />}
-          placeholder="Tìm IP, MAC, mã thiết bị hoặc tên khay"
-          value={searchText}
-          onChange={(event) => {
-            setSearchText(event.target.value)
-            setCurrentPage(1)
-          }}
-          style={{ width: 340, maxWidth: '100%' }}
-        />
+      <Card
+        title={
+          <Space>
+            <WifiOutlined />
+            <span>Gateway Master ESP32-S3</span>
+          </Space>
+        }
+        extra={<Tag color="success">{gateway.status}</Tag>}
+        style={{ marginBottom: 20 }}
+      >
+        <Flex gap={24} wrap justify="space-between">
+          <div>
+            <Typography.Text strong>{gateway.id}</Typography.Text>
+            <Typography.Paragraph type="secondary" style={{ margin: '4px 0 0' }}>
+              IP {gateway.ipAddress} · MAC {gateway.macAddress} · Firmware {gateway.firmwareVersion}
+            </Typography.Paragraph>
+            <Typography.Text type="secondary">
+              Wi-Fi {gateway.wifiRssi} dBm · Ping cuối {formatTimestamp(gateway.lastPingTimestamp)}
+            </Typography.Text>
+          </div>
 
-        <Select<DeviceStatus>
-          allowClear
-          placeholder="Lọc theo trạng thái"
-          options={STATUS_OPTIONS}
-          value={statusFilter}
-          onChange={(value) => {
-            setStatusFilter(value)
-            setCurrentPage(1)
-          }}
-          style={{ width: 180 }}
-          aria-label="Lọc thiết bị theo trạng thái"
-        />
-      </Flex>
+          <Flex gap={24} wrap>
+            {GATEWAY_RELAYS.map((relay) => (
+              <Flex key={relay.key} vertical gap={6} align="center">
+                <Space>{relay.icon}<Typography.Text>{relay.label}</Typography.Text></Space>
+                <Switch
+                  checked={gateway.relays[relay.key]}
+                  onChange={() => toggleGatewayRelay(relay.key)}
+                  checkedChildren="Bật"
+                  unCheckedChildren="Tắt"
+                />
+              </Flex>
+            ))}
+          </Flex>
+        </Flex>
+      </Card>
 
-      {visibleDevices.length === 0 ? (
-        <Empty description="Không có thiết bị phù hợp" />
-      ) : (
-        <Flex vertical gap={20}>
-          {visibleDevices.map((device) => {
-            const statusConfig = STATUS_CONFIG[device.status]
-            const tray = trayById.get(device.node.trayId)
-            const pingActionKey = `${device.id}:ping`
-            const restartActionKey = `${device.id}:restart`
+      <section className="rs485-topology" aria-label="Sơ đồ kết nối RS485">
+        <div className="rs485-master">
+          <WifiOutlined />
+          <strong>ESP32-S3</strong>
+          <span>RS485 Master</span>
+        </div>
+        <div className="rs485-bus-line" aria-hidden="true">
+          <span>RS485 BUS</span>
+        </div>
+        <div className="rs485-node-grid">
+          {nodes.map((node) => {
+            const status = STATUS_CONFIG[node.status]
 
             return (
-              <section
-                key={device.id}
-                aria-labelledby={`${device.id}-title`}
-                style={{
-                  padding: 20,
-                  border: '1px solid #e5e7eb',
-                  borderRadius: 8,
-                  background: '#ffffff',
-                }}
-              >
-                <Flex
-                  align="center"
-                  justify="space-between"
-                  gap={16}
-                  wrap
-                  style={{ marginBottom: 16 }}
-                >
-                  <div>
-                    <Flex align="center" gap={8} wrap>
-                      <Typography.Title
-                        id={`${device.id}-title`}
-                        level={4}
-                        style={{ margin: 0 }}
-                      >
-                        {tray?.name ?? device.node.trayId}
-                      </Typography.Title>
-                      <Tag color={statusConfig.color}>{statusConfig.label}</Tag>
-                      <Tag icon={<ApiOutlined />} color="processing">
-                        Node {device.node.nodeAddress}
-                      </Tag>
-                    </Flex>
-                    <Typography.Text type="secondary">
-                      {device.node.trayId} · Địa chỉ RS485 (Node ID: #{device.node.nodeAddress}) ·
-                      {' '}DIP {device.node.dipSwitch} · Firmware {device.firmwareVersion} · Ping cuối:{' '}
-                      {formatTimestamp(device.lastPingTimestamp)}
-                    </Typography.Text>
-                    <Typography.Text type="secondary" style={{ display: 'block' }}>
-                      Gateway Master ESP32-S3: {device.gateway.id} · IP {device.gateway.ipAddress} ·
-                      {' '}MAC {device.gateway.macAddress}
-                    </Typography.Text>
-                  </div>
-
-                  <Space wrap>
-                    <Typography.Text type="secondary">
-                      <WifiOutlined /> {device.wifiRssi} dBm
-                    </Typography.Text>
-                    <Button
-                      icon={<ApiOutlined />}
-                      loading={pendingAction === pingActionKey}
-                      onClick={() => void handlePing(device)}
-                    >
-                      Ping
-                    </Button>
-                    <Button
-                      icon={<ReloadOutlined />}
-                      loading={pendingAction === restartActionKey}
-                      onClick={() => void handleRestart(device)}
-                    >
-                      Restart
-                    </Button>
-                  </Space>
-                </Flex>
-
-                <DeviceMetricsGrid telemetry={device.telemetry} />
-
-                <Flex gap={16} wrap style={{ marginTop: 16 }}>
-                  <div style={{ flex: '1 1 560px', minWidth: 0 }}>
-                    <CameraStreamCard
-                      deviceId={device.id}
-                      status={device.status}
-                      camera={device.camera}
-                      onSnapshot={() => handleSnapshot(device)}
-                    />
-                  </div>
-                  <div style={{ flex: '1 1 360px', minWidth: 300 }}>
-                    <ActuatorControlPanel
-                      actuators={device.actuators}
-                      deviceStatus={device.status}
-                      onToggle={(actuator) =>
-                        handleToggleActuator(device, actuator)
-                      }
-                      onModeChange={(mode) => handleModeChange(device, mode)}
-                    />
-                  </div>
-                </Flex>
-              </section>
+              <div key={node.id} className="rs485-node">
+                <Tag color={status.color}>{status.label}</Tag>
+                <strong>Node {node.address}</strong>
+                <span>Tầng {node.tierId}</span>
+              </div>
             )
           })}
-        </Flex>
-      )}
+        </div>
+      </section>
 
-      {filteredDevices.length > PAGE_SIZE && (
-        <Flex justify="flex-end" style={{ marginTop: 20 }}>
-          <Pagination
-            current={visiblePage}
-            pageSize={PAGE_SIZE}
-            total={filteredDevices.length}
-            showSizeChanger={false}
-            showTotal={(total) => `${total} thiết bị`}
-            onChange={setCurrentPage}
-          />
-        </Flex>
-      )}
+      <Flex vertical gap={16} style={{ marginTop: 20 }}>
+        {tiers.map((tier) => {
+          const node = nodes.find((item) => item.tierId === tier.tierId)
 
-      <DeviceFormModal
-        open={isFormOpen}
-        initialValues={
-          editingDevice ? getDefaultDeviceFormValues(editingDevice) : undefined
-        }
-        availableTrayOptions={availableTrayOptions}
-        onCancel={() => {
-          setIsFormOpen(false)
-          setEditingDevice(null)
-        }}
-        onSubmit={handleSubmit}
-      />
+          if (!node) {
+            return null
+          }
+
+          const status = STATUS_CONFIG[node.status]
+          const isUnavailable = node.status === 'OFFLINE' || node.status === 'ERROR'
+
+          return (
+            <section key={node.id} className="device-tier-section">
+              <Flex align="flex-start" justify="space-between" gap={16} wrap style={{ marginBottom: 16 }}>
+                <div>
+                  <Flex align="center" gap={8} wrap>
+                    <Typography.Title level={4} style={{ margin: 0 }}>
+                      {tier.name}
+                    </Typography.Title>
+                    <Tag icon={<ApiOutlined />} color={status.color}>{node.id}</Tag>
+                    <Tag color={status.color}>{status.label}</Tag>
+                  </Flex>
+                  <Typography.Text type="secondary">
+                    Địa chỉ RS485 #{node.address} · Firmware {node.firmwareVersion} ·
+                    {' '}Độ trễ {node.latencyMs} ms · Mất gói {node.packetLossPercent}%
+                  </Typography.Text>
+                </div>
+
+                <Space>
+                  <Button
+                    icon={<ApiOutlined />}
+                    loading={pendingAction === `${node.id}:ping`}
+                    onClick={() => void handleNodeAction(node, 'ping')}
+                  >
+                    Ping
+                  </Button>
+                  <Button
+                    icon={<ReloadOutlined />}
+                    loading={pendingAction === `${node.id}:restart`}
+                    onClick={() => void handleNodeAction(node, 'restart')}
+                  >
+                    Restart
+                  </Button>
+                </Space>
+              </Flex>
+
+              <DeviceMetricsGrid telemetry={tier.telemetry} />
+
+              <Flex gap={24} wrap style={{ marginTop: 16 }}>
+                <Flex vertical gap={6} align="center">
+                  <Typography.Text strong>Quạt {tier.name}</Typography.Text>
+                  <Switch
+                    checked={tier.relays.fan}
+                    disabled={isUnavailable}
+                    onChange={() => toggleTierFan(tier.tierId)}
+                    checkedChildren="Bật"
+                    unCheckedChildren="Tắt"
+                  />
+                </Flex>
+                {TRAY_POSITIONS.map((position) => (
+                  <Flex key={position} vertical gap={6} align="center">
+                    <Typography.Text strong>
+                      Van T{tier.tierId}-K{position}
+                    </Typography.Text>
+                    <Switch
+                      checked={tier.relays.irrigationValves[position]}
+                      disabled={isUnavailable}
+                      onChange={() => toggleTrayValve(tier.tierId, position)}
+                      checkedChildren="Bật"
+                      unCheckedChildren="Tắt"
+                    />
+                  </Flex>
+                ))}
+              </Flex>
+            </section>
+          )
+        })}
+      </Flex>
     </div>
   )
 }

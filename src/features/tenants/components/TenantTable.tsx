@@ -1,7 +1,8 @@
 import { useMemo } from 'react'
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons'
-import { Button, Modal, Space, Table, Tag, Tooltip } from 'antd'
+import { Button, Modal, Space, Table, Tag, Tooltip, message } from 'antd'
 import type { TableColumnsType } from 'antd'
+import { useRoomStore } from '../../rooms/store/room.store'
 import { useTenantStore } from '../store/tenant.store'
 import type { Tenant } from '../types/tenant.types'
 
@@ -10,14 +11,8 @@ interface TenantTableProps {
 }
 
 const STATUS_CONFIG = {
-  active: {
-    color: 'success',
-    label: 'Đang thuê',
-  },
-  expired: {
-    color: 'default',
-    label: 'Hết hạn',
-  },
+  active: { color: 'success', label: 'Đang thuê' },
+  expired: { color: 'default', label: 'Hết hạn' },
 } as const satisfies Record<
   Tenant['status'],
   { color: string; label: string }
@@ -26,6 +21,12 @@ const STATUS_CONFIG = {
 export function TenantTable({ onEdit }: TenantTableProps) {
   const tenants = useTenantStore((state) => state.tenants)
   const deleteTenant = useTenantStore((state) => state.deleteTenant)
+  const tiers = useRoomStore((state) => state.tiers)
+
+  const trayById = useMemo(
+    () => new Map(tiers.flatMap((tier) => tier.trays).map((tray) => [tray.id, tray])),
+    [tiers],
+  )
 
   const columns = useMemo<TableColumnsType<Tenant>>(
     () => [
@@ -47,10 +48,15 @@ export function TenantTable({ onEdit }: TenantTableProps) {
         width: 140,
       },
       {
-        title: 'Khay đang thuê',
+        title: 'Tầng / Khay',
         dataIndex: 'assignedTrayId',
         key: 'assignedTrayId',
-        width: 160,
+        width: 170,
+        render: (trayId: string) => {
+          const tray = trayById.get(trayId)
+
+          return tray ? `Tầng ${tray.tierId} · ${tray.code}` : trayId
+        },
       },
       {
         title: 'Ngày bắt đầu',
@@ -93,11 +99,14 @@ export function TenantTable({ onEdit }: TenantTableProps) {
                 onClick={() =>
                   Modal.confirm({
                     title: 'Xóa khách thuê?',
-                    content: `Bạn có chắc muốn xóa ${tenant.name} không?`,
+                    content: `Khay của ${tenant.name} sẽ được giải phóng.`,
                     okText: 'Xóa',
                     cancelText: 'Hủy',
                     okButtonProps: { danger: true },
-                    onOk: () => deleteTenant(tenant.id),
+                    onOk: () => {
+                      deleteTenant(tenant.id)
+                      message.success('Đã xóa khách thuê và cập nhật khay.')
+                    },
                   })
                 }
                 aria-label={`Xóa ${tenant.name}`}
@@ -107,7 +116,7 @@ export function TenantTable({ onEdit }: TenantTableProps) {
         ),
       },
     ],
-    [deleteTenant, onEdit],
+    [deleteTenant, onEdit, trayById],
   )
 
   return (

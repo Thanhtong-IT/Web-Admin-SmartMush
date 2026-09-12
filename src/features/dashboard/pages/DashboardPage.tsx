@@ -1,25 +1,21 @@
 import { useMemo } from 'react'
 import { Col, Row, Typography } from 'antd'
 import { useAlertStore } from '../../../stores/alert.store'
-import { useRoomStore } from '../../../stores/room.store'
+import { getAllTrays, useRoomStore } from '../../../stores/room.store'
 import { EnvironmentChart } from '../components/EnvironmentChart'
 import { EnvironmentMetricCard } from '../components/EnvironmentMetricCard'
 import { QuickSummaryStats } from '../components/QuickSummaryStats'
 import { RecentAlertsTable } from '../components/RecentAlertsTable'
-import { CloudOutlined, FireOutlined } from '@ant-design/icons'
+import { CloudOutlined, CloudServerOutlined, FireOutlined } from '@ant-design/icons'
 
 export function DashboardPage() {
-  const rooms = useRoomStore((state) => state.rooms)
-  const trays = useRoomStore((state) => state.trays)
+  const tiers = useRoomStore((state) => state.tiers)
   const alerts = useAlertStore((state) => state.alerts)
 
   const summary = useMemo(() => {
-    const totalCapacity = rooms.reduce(
-      (total, room) => total + room.maxCapacity,
-      0,
-    )
+    const trays = getAllTrays(tiers)
     const activeInUseTrays = trays.filter(
-      (tray) => tray.status === 'ACTIVE' && tray.tenantId !== null,
+      (tray) => tray.status === 'rented' || tray.status === 'harvesting',
     ).length
     const activeAlerts = alerts.filter(
       (alert) => !alert.isAcknowledged,
@@ -28,10 +24,21 @@ export function DashboardPage() {
     return {
       totalTrays: trays.length,
       activeInUseTrays,
-      availableTrays: Math.max(totalCapacity - trays.length, 0),
+      availableTrays: trays.filter((tray) => tray.status === 'empty').length,
       activeAlerts,
+      averageTemperature:
+        tiers.reduce((total, tier) => total + tier.telemetry.temperature, 0) /
+        tiers.length,
+      averageHumidity: Math.round(
+        tiers.reduce((total, tier) => total + tier.telemetry.humidity, 0) /
+          tiers.length,
+      ),
+      averageCo2: Math.round(
+        tiers.reduce((total, tier) => total + tier.telemetry.co2, 0) /
+          tiers.length,
+      ),
     }
-  }, [alerts, rooms, trays])
+  }, [alerts, tiers])
 
   return (
     <div>
@@ -46,10 +53,10 @@ export function DashboardPage() {
           Giám sát môi trường
         </Typography.Title>
         <Row gutter={[16, 16]}>
-          <Col xs={24} sm={12} xl={6}>
+          <Col xs={24} sm={12} xl={8}>
             <EnvironmentMetricCard
               title="Nhiệt độ trung bình"
-              value={25.6}
+              value={summary.averageTemperature}
               unit="°C"
               precision={1}
               icon={<FireOutlined />}
@@ -57,13 +64,22 @@ export function DashboardPage() {
             />
           </Col>
 
-          <Col xs={24} sm={12} xl={6}>
+          <Col xs={24} sm={12} xl={8}>
             <EnvironmentMetricCard
               title="Độ ẩm trung bình"
-              value={87}
+              value={summary.averageHumidity}
               unit="%"
               icon={<CloudOutlined />}
               color="#0f766e"
+            />
+          </Col>
+          <Col xs={24} sm={12} xl={8}>
+            <EnvironmentMetricCard
+              title="CO₂ trung bình"
+              value={summary.averageCo2}
+              unit=" ppm"
+              icon={<CloudServerOutlined />}
+              color="#7c3d12"
             />
           </Col>
         </Row>

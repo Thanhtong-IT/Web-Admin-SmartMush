@@ -2,23 +2,19 @@ import type { ReactNode } from 'react'
 import {
   CloudOutlined,
   CloudServerOutlined,
-  ExperimentOutlined,
   FireOutlined,
 } from '@ant-design/icons'
 import { Card, Col, Row, Statistic, Tag } from 'antd'
-import type { DeviceTelemetry } from '../../../types/device.types'
+import type { TierTelemetry } from '../../../types/room.types'
 
 interface DeviceMetricsGridProps {
-  telemetry: DeviceTelemetry
+  telemetry: TierTelemetry
 }
 
 type MetricTone = 'normal' | 'warning' | 'danger'
 
 interface MetricDefinition {
-  key: keyof Pick<
-    DeviceTelemetry,
-    'temperature' | 'humidity' | 'co2' | 'soilMoisture'
-  >
+  key: keyof Pick<TierTelemetry, 'temperature' | 'humidity' | 'co2'>
   title: string
   unit: string
   icon: ReactNode
@@ -28,15 +24,15 @@ interface MetricDefinition {
 }
 
 const TONE_CONFIG: Record<MetricTone, { color: string; label: string }> = {
-  normal: { color: '#16a34a', label: 'Bình thường' },
-  warning: { color: '#ca8a04', label: 'Cận ngưỡng' },
-  danger: { color: '#dc2626', label: 'Nguy hiểm' },
+  normal: { color: '#16803b', label: 'Bình thường' },
+  warning: { color: '#b45309', label: 'Cận ngưỡng' },
+  danger: { color: '#c81e1e', label: 'Nguy hiểm' },
 }
 
 const METRICS: MetricDefinition[] = [
   {
     key: 'temperature',
-    title: 'Nhiệt độ',
+    title: 'Nhiệt độ tầng',
     unit: '°C',
     icon: <FireOutlined />,
     normalRange: '20-28°C',
@@ -50,7 +46,7 @@ const METRICS: MetricDefinition[] = [
   },
   {
     key: 'humidity',
-    title: 'Độ ẩm không khí',
+    title: 'Độ ẩm tầng',
     unit: '%RH',
     icon: <CloudOutlined />,
     normalRange: '75-95%RH',
@@ -66,35 +62,22 @@ const METRICS: MetricDefinition[] = [
     title: 'Nồng độ CO₂',
     unit: 'ppm',
     icon: <CloudServerOutlined />,
-    normalRange: '400-800ppm',
+    normalRange: '400-850ppm',
     getTone: (value) =>
-      value > 1200 ? 'danger' : value > 800 ? 'warning' : 'normal',
-  },
-  {
-    key: 'soilMoisture',
-    title: 'Độ ẩm giá thể',
-    unit: '%',
-    icon: <ExperimentOutlined />,
-    normalRange: '60-85%',
-    getTone: (value) =>
-      value < 40 || value > 95
-        ? 'danger'
-        : value < 60 || value > 85
-          ? 'warning'
-          : 'normal',
+      value > 1200 ? 'danger' : value > 850 ? 'warning' : 'normal',
   },
 ]
 
 export function DeviceMetricsGrid({ telemetry }: DeviceMetricsGridProps) {
   return (
-    <Row gutter={[12, 12]}>
+    <Row gutter={[10, 10]}>
       {METRICS.map((metric) => {
         const value = telemetry[metric.key]
         const tone = metric.getTone(value)
         const toneConfig = TONE_CONFIG[tone]
 
         return (
-          <Col key={metric.key} xs={12} xl={6}>
+          <Col key={metric.key} xs={24} sm={8}>
             <Card
               size="small"
               style={{ height: '100%', borderTop: `3px solid ${toneConfig.color}` }}
@@ -105,10 +88,7 @@ export function DeviceMetricsGrid({ telemetry }: DeviceMetricsGridProps) {
                 precision={metric.precision}
                 suffix={metric.unit}
                 prefix={
-                  <span
-                    aria-hidden="true"
-                    style={{ color: toneConfig.color, marginRight: 4 }}
-                  >
+                  <span aria-hidden="true" style={{ color: toneConfig.color }}>
                     {metric.icon}
                   </span>
                 }

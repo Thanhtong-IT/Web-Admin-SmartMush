@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { PlusOutlined } from '@ant-design/icons'
-import { Button, Flex, Typography } from 'antd'
+import { Button, Flex, Typography, message } from 'antd'
 import { TenantForm } from '../components/TenantForm'
 import { TenantTable } from '../components/TenantTable'
 import { useTenantStore } from '../store/tenant.store'
@@ -27,8 +27,10 @@ export function TenantListPage() {
 
     if (editingTenant) {
       updateTenant(editingTenant.id, values)
+      message.success('Đã cập nhật khách thuê và khay được gán.')
     } else {
       addTenant(values)
+      message.success('Đã thêm khách thuê và gán khay.')
     }
 
     setIsModalVisible(false)
@@ -45,7 +47,7 @@ export function TenantListPage() {
         style={{ marginBottom: 20 }}
       >
         <Typography.Title level={3} style={{ margin: 0 }}>
-          Quản lý khách thuê
+          Khách thuê khay
         </Typography.Title>
 
         <Button
@@ -62,6 +64,7 @@ export function TenantListPage() {
       <TenantForm
         visible={isModalVisible}
         initialValues={editingTenant ?? undefined}
+        editingCustomerId={editingTenant?.id}
         onCancel={() => {
           setIsModalVisible(false)
           setEditingTenant(null)

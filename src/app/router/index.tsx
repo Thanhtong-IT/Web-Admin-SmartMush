@@ -1,9 +1,9 @@
-import { createBrowserRouter } from 'react-router-dom'
+import { Navigate, createBrowserRouter } from 'react-router-dom'
 import { LoginPage } from '../../features/auth/pages/LoginPage'
 import { DashboardPage } from '../../features/dashboard/pages/DashboardPage'
 import { RoomListPage } from '../../features/rooms/pages/RoomListPage'
-import { TrayDetailPage } from '../../features/rooms/pages/TrayDetailPage'
 import { TenantListPage } from '../../features/tenants/pages/TenantListPage'
+import { CameraOverviewPage } from '../../pages/camera/CameraOverviewPage'
 import { DeviceManagementPage } from '../../pages/devices/DeviceManagementPage'
 import { PackageManagementPage } from '../../pages/packages/PackageManagementPage'
 import { CultivationManagementPage } from '../../pages/cultivation/CultivationManagementPage'
@@ -38,7 +38,11 @@ export const router = createBrowserRouter([
       },
       {
         path: 'rooms/:id',
-        element: <TrayDetailPage />,
+        element: <RoomListPage />,
+      },
+      {
+        path: 'trays',
+        element: <Navigate to="/rooms" replace />,
       },
       {
         path: 'devices',
@@ -65,8 +69,16 @@ export const router = createBrowserRouter([
         element: <ReportsAnalyticsPage />,
       },
       {
-        path: 'tenants',
+        path: 'customers',
         element: <TenantListPage />,
+      },
+      {
+        path: 'tenants',
+        element: <Navigate to="/customers" replace />,
+      },
+      {
+        path: 'camera',
+        element: <CameraOverviewPage />,
       },
       {
         path: 'users',

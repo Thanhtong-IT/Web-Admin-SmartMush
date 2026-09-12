@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Form, Input, Modal, Select } from 'antd'
+import { Cascader, Form, Input, Modal, Select, message } from 'antd'
 import { useRoomStore } from '../../rooms/store/room.store'
+import { TRAY_STATUS_CONFIG } from '../../rooms/components/tray-status.config'
+import type { TierId } from '../../../types/room.types'
 import type { Tenant, TenantFormValues } from '../types/tenant.types'
 
 interface TenantFormProps {
@@ -8,6 +10,13 @@ interface TenantFormProps {
   onCancel: () => void
   onSubmit: (values: TenantFormValues) => Promise<void>
   initialValues?: Partial<TenantFormValues>
+  editingCustomerId?: string
+}
+
+type TraySelection = [TierId, string]
+
+interface TenantFormFields extends Omit<TenantFormValues, 'assignedTrayId'> {
+  traySelection?: TraySelection
 }
 
 const STATUS_OPTIONS = [
@@ -20,18 +29,32 @@ export function TenantForm({
   onCancel,
   onSubmit,
   initialValues,
+  editingCustomerId,
 }: TenantFormProps) {
-  const [form] = Form.useForm<TenantFormValues>()
+  const [form] = Form.useForm<TenantFormFields>()
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const trays = useRoomStore((state) => state.trays)
+  const tiers = useRoomStore((state) => state.tiers)
 
   const trayOptions = useMemo(
     () =>
-      trays.map((tray) => ({
-        value: tray.id,
-        label: `${tray.id} - ${tray.name}`,
-      })),
-    [trays],
+      [...tiers]
+        .sort((left, right) => left.tierId - right.tierId)
+        .map((tier) => ({
+          value: tier.tierId,
+          label: `${tier.name} · ${tier.nodeId}`,
+          children: tier.trays.map((tray) => {
+            const isCurrentCustomer = tray.customerId === editingCustomerId
+            const isUnavailable =
+              tray.status !== 'empty' || tray.customerId !== null
+
+            return {
+              value: tray.id,
+              label: `${tray.code} · ${TRAY_STATUS_CONFIG[tray.status].label}`,
+              disabled: isUnavailable && !isCurrentCustomer,
+            }
+          }),
+        })),
+    [editingCustomerId, tiers],
   )
 
   useEffect(() => {
@@ -39,16 +62,36 @@ export function TenantForm({
       return
     }
 
-    form.resetFields()
-    form.setFieldsValue({ status: 'active', ...initialValues })
-  }, [form, initialValues, visible])
+    const selectedTray = tiers
+      .flatMap((tier) => tier.trays)
+      .find((tray) => tray.id === initialValues?.assignedTrayId)
 
-  const handleSubmit = async (values: TenantFormValues) => {
+    form.resetFields()
+    form.setFieldsValue({
+      status: 'active',
+      ...initialValues,
+      traySelection: selectedTray
+        ? [selectedTray.tierId, selectedTray.id]
+        : undefined,
+    })
+  }, [form, initialValues, tiers, visible])
+
+  const handleSubmit = async ({ traySelection, ...values }: TenantFormFields) => {
+    if (!traySelection) {
+      return
+    }
+
     setIsSubmitting(true)
 
     try {
-      await onSubmit(values)
+      await onSubmit({ ...values, assignedTrayId: traySelection[1] })
       form.resetFields()
+    } catch (error) {
+      message.error(
+        error instanceof Error
+          ? error.message
+          : 'Không thể gán khay cho khách thuê.',
+      )
     } finally {
       setIsSubmitting(false)
     }
@@ -70,7 +113,7 @@ export function TenantForm({
       destroyOnHidden
       afterClose={() => form.resetFields()}
     >
-      <Form<TenantFormValues>
+      <Form<TenantFormFields>
         form={form}
         layout="vertical"
         requiredMark={false}
@@ -109,15 +152,16 @@ export function TenantForm({
         </Form.Item>
 
         <Form.Item
-          label="Khay đang thuê"
-          name="assignedTrayId"
-          rules={[{ required: true, message: 'Vui lòng chọn khay đang thuê.' }]}
+          label="Tầng → Khay con"
+          name="traySelection"
+          rules={[
+            { required: true, message: 'Vui lòng chọn tầng và khay con.' },
+          ]}
         >
-          <Select
+          <Cascader
             options={trayOptions}
-            placeholder="Chọn khay trồng"
+            placeholder="Chọn tầng, sau đó chọn khay trống"
             showSearch
-            optionFilterProp="label"
           />
         </Form.Item>
 

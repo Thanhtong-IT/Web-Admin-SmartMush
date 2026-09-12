@@ -52,7 +52,7 @@ export function RecentAlertsTable() {
       ellipsis: true,
     },
     {
-      title: 'Khay / ESP32',
+      title: 'Khay / Node STM32',
       key: 'target',
       width: 190,
       render: (_, alert) => `${alert.trayName} · ${alert.deviceId}`,
