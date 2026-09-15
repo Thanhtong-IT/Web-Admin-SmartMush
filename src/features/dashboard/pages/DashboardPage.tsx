@@ -1,12 +1,29 @@
-import { useMemo } from 'react'
+import {
+  CalendarOutlined,
+  CheckCircleFilled,
+  CloudOutlined,
+  CloudServerOutlined,
+  FireOutlined,
+} from '@ant-design/icons'
 import { Col, Row, Typography } from 'antd'
+import { useMemo } from 'react'
 import { useAlertStore } from '../../../stores/alert.store'
 import { getAllTrays, useRoomStore } from '../../../stores/room.store'
 import { EnvironmentChart } from '../components/EnvironmentChart'
 import { EnvironmentMetricCard } from '../components/EnvironmentMetricCard'
 import { QuickSummaryStats } from '../components/QuickSummaryStats'
 import { RecentAlertsTable } from '../components/RecentAlertsTable'
-import { CloudOutlined, CloudServerOutlined, FireOutlined } from '@ant-design/icons'
+
+function getFormattedToday() {
+  const formattedDate = new Intl.DateTimeFormat('vi-VN', {
+    weekday: 'long',
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date())
+
+  return formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1)
+}
 
 export function DashboardPage() {
   const tiers = useRoomStore((state) => state.tiers)
@@ -14,6 +31,7 @@ export function DashboardPage() {
 
   const summary = useMemo(() => {
     const trays = getAllTrays(tiers)
+    const tierCount = tiers.length
     const activeInUseTrays = trays.filter(
       (tray) => tray.status === 'rented' || tray.status === 'harvesting',
     ).length
@@ -27,31 +45,71 @@ export function DashboardPage() {
       availableTrays: trays.filter((tray) => tray.status === 'empty').length,
       activeAlerts,
       averageTemperature:
-        tiers.reduce((total, tier) => total + tier.telemetry.temperature, 0) /
-        tiers.length,
-      averageHumidity: Math.round(
-        tiers.reduce((total, tier) => total + tier.telemetry.humidity, 0) /
-          tiers.length,
-      ),
-      averageCo2: Math.round(
-        tiers.reduce((total, tier) => total + tier.telemetry.co2, 0) /
-          tiers.length,
-      ),
+        tierCount > 0
+          ? tiers.reduce(
+              (total, tier) => total + tier.telemetry.temperature,
+              0,
+            ) / tierCount
+          : 0,
+      averageHumidity:
+        tierCount > 0
+          ? Math.round(
+              tiers.reduce(
+                (total, tier) => total + tier.telemetry.humidity,
+                0,
+              ) / tierCount,
+            )
+          : 0,
+      averageCo2:
+        tierCount > 0
+          ? Math.round(
+              tiers.reduce(
+                (total, tier) => total + tier.telemetry.co2,
+                0,
+              ) / tierCount,
+            )
+          : 0,
     }
   }, [alerts, tiers])
 
   return (
-    <div>
-      <Typography.Title level={3} style={{ marginTop: 0, marginBottom: 20 }}>
-        Tổng quan MCMS
-      </Typography.Title>
+    <div className="dashboard-page">
+      <header className="dashboard-page-header">
+        <div className="dashboard-heading-copy">
+          <span className="page-kicker">TRUNG TÂM VẬN HÀNH</span>
+          <Typography.Title level={2}>Tổng quan trang trại</Typography.Title>
+          <Typography.Paragraph>
+            Theo dõi công suất khay và điều kiện vi khí hậu trong một màn hình.
+          </Typography.Paragraph>
+        </div>
+
+        <div className="dashboard-date" aria-label={`Hôm nay, ${getFormattedToday()}`}>
+          <CalendarOutlined aria-hidden="true" />
+          <span>
+            <small>Hôm nay</small>
+            <strong>{getFormattedToday()}</strong>
+          </span>
+        </div>
+      </header>
 
       <QuickSummaryStats {...summary} />
 
-      <section style={{ marginTop: 20 }}>
-        <Typography.Title level={4} style={{ margin: '0 0 16px' }}>
-          Giám sát môi trường
-        </Typography.Title>
+      <section className="dashboard-section" aria-labelledby="environment-heading">
+        <div className="section-heading-row">
+          <div>
+            <Typography.Title id="environment-heading" level={4}>
+              Điều kiện môi trường
+            </Typography.Title>
+            <Typography.Text type="secondary">
+              Giá trị trung bình từ 4 tầng nuôi nấm
+            </Typography.Text>
+          </div>
+          <span className="healthy-indicator">
+            <CheckCircleFilled aria-hidden="true" />
+            Trong ngưỡng vận hành
+          </span>
+        </div>
+
         <Row gutter={[16, 16]}>
           <Col xs={24} sm={12} xl={8}>
             <EnvironmentMetricCard
@@ -60,7 +118,9 @@ export function DashboardPage() {
               unit="°C"
               precision={1}
               icon={<FireOutlined />}
-              color="#dc2626"
+              tone="coral"
+              status="Ổn định"
+              target="Mục tiêu 23–28°C"
             />
           </Col>
 
@@ -70,7 +130,9 @@ export function DashboardPage() {
               value={summary.averageHumidity}
               unit="%"
               icon={<CloudOutlined />}
-              color="#0f766e"
+              tone="teal"
+              status="Tối ưu"
+              target="Mục tiêu 80–92%"
             />
           </Col>
           <Col xs={24} sm={12} xl={8}>
@@ -79,16 +141,16 @@ export function DashboardPage() {
               value={summary.averageCo2}
               unit=" ppm"
               icon={<CloudServerOutlined />}
-              color="#7c3d12"
+              tone="amber"
+              status="An toàn"
+              target="Ngưỡng dưới 1.000 ppm"
             />
           </Col>
         </Row>
 
-        <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-          <Col span={24}>
-            <EnvironmentChart />
-          </Col>
-        </Row>
+        <div className="dashboard-chart-wrap">
+          <EnvironmentChart />
+        </div>
       </section>
 
       <RecentAlertsTable />

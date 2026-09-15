@@ -1,13 +1,6 @@
+import { LockOutlined, MailOutlined } from '@ant-design/icons'
+import { Alert, Button, Card, Checkbox, Form, Input, Typography } from 'antd'
 import { useState } from 'react'
-import {
-  Alert,
-  Button,
-  Card,
-  Checkbox,
-  Form,
-  Input,
-  Typography,
-} from 'antd'
 import { useAuthStore } from '../store/auth.store'
 import type { LoginCredentials } from '../types/auth.types'
 
@@ -40,16 +33,15 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
   }
 
   return (
-    <Card
-      variant="outlined"
-      styles={{ body: { padding: 32 } }}
-      style={{ borderRadius: 8, boxShadow: '0 8px 24px rgba(0, 0, 0, 0.08)' }}
-    >
-      <Typography.Title level={2} style={{ margin: '0 0 8px', fontSize: 24 }}>
-        Đăng nhập MCMS
-      </Typography.Title>
-      <Typography.Paragraph type="secondary" style={{ marginBottom: 24 }}>
-        Truy cập hệ thống quản lý trang trại nấm
+    <Card className="login-card" variant="outlined">
+      <div className="login-mobile-brand" aria-hidden="true">
+        <img src="/mcms-mark.svg" alt="" width="38" height="38" />
+        <strong>MCMS</strong>
+      </div>
+      <span className="login-form-kicker">CHÀO MỪNG TRỞ LẠI</span>
+      <Typography.Title level={2}>Đăng nhập quản trị</Typography.Title>
+      <Typography.Paragraph>
+        Sử dụng tài khoản được cấp để tiếp tục vào hệ thống.
       </Typography.Paragraph>
 
       {errorMessage && (
@@ -62,6 +54,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       )}
 
       <Form<LoginCredentials>
+        className="login-form"
         layout="vertical"
         requiredMark={false}
         initialValues={{
@@ -82,6 +75,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
             type="email"
             autoComplete="email"
             placeholder="admin@mcms.vn"
+            prefix={<MailOutlined aria-hidden="true" />}
             size="large"
           />
         </Form.Item>
@@ -94,6 +88,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           <Input.Password
             autoComplete="current-password"
             placeholder="Nhập mật khẩu"
+            prefix={<LockOutlined aria-hidden="true" />}
             size="large"
           />
         </Form.Item>
@@ -101,7 +96,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         <Form.Item<LoginCredentials>
           name="rememberMe"
           valuePropName="checked"
-          style={{ marginBottom: 20 }}
+          className="login-remember-row"
         >
           <Checkbox>Ghi nhớ đăng nhập</Checkbox>
         </Form.Item>
@@ -116,6 +111,11 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           Đăng nhập
         </Button>
       </Form>
+
+      <div className="login-security-note">
+        <LockOutlined aria-hidden="true" />
+        Phiên đăng nhập được bảo vệ và tự động xác thực.
+      </div>
     </Card>
   )
 }

@@ -1,12 +1,16 @@
+import { Card } from 'antd'
 import type { ReactNode } from 'react'
-import { Card, Statistic } from 'antd'
+
+type EnvironmentTone = 'coral' | 'teal' | 'amber'
 
 interface EnvironmentMetricCardProps {
   title: string
   value: number
   unit: string
   icon: ReactNode
-  color: string
+  tone: EnvironmentTone
+  status: string
+  target: string
   precision?: number
 }
 
@@ -15,26 +19,30 @@ export function EnvironmentMetricCard({
   value,
   unit,
   icon,
-  color,
-  precision,
+  tone,
+  status,
+  target,
+  precision = 0,
 }: EnvironmentMetricCardProps) {
+  const formattedValue = value.toLocaleString('vi-VN', {
+    minimumFractionDigits: precision,
+    maximumFractionDigits: precision,
+  })
+
   return (
-    <Card style={{ height: '100%' }} styles={{ body: { padding: 20 } }}>
-      <Statistic
-        title={title}
-        value={value}
-        precision={precision}
-        suffix={unit}
-        prefix={
-          <span
-            aria-hidden="true"
-            style={{ marginRight: 8, color, fontSize: 24 }}
-          >
-            {icon}
-          </span>
-        }
-        styles={{ content: { color: '#1f2937' } }}
-      />
+    <Card className={`environment-card environment-card--${tone}`}>
+      <div className="environment-card-header">
+        <span className="environment-card-icon" aria-hidden="true">
+          {icon}
+        </span>
+        <span className="environment-status">{status}</span>
+      </div>
+      <span className="environment-card-title">{title}</span>
+      <div className="environment-card-value">
+        <strong>{formattedValue}</strong>
+        <span>{unit}</span>
+      </div>
+      <span className="environment-card-target">{target}</span>
     </Card>
   )
 }

@@ -1,3 +1,4 @@
+import { CheckCircleFilled } from '@ant-design/icons'
 import { Card, Typography } from 'antd'
 import {
   CartesianGrid,
@@ -36,58 +37,100 @@ interface EnvironmentChartProps {
   data?: EnvironmentDataPoint[]
 }
 
-export function EnvironmentChart({ data = ENVIRONMENT_DATA }: EnvironmentChartProps) {
+export function EnvironmentChart({
+  data = ENVIRONMENT_DATA,
+}: EnvironmentChartProps) {
   return (
-    <Card
-      title="Biến động môi trường"
-      extra={<Typography.Text type="secondary">24 giờ qua</Typography.Text>}
-    >
-      <ResponsiveContainer width="100%" height={360}>
-        <LineChart
-          data={data}
-          margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-          <XAxis dataKey="time" tick={{ fill: '#6b7280', fontSize: 12 }} />
-          <YAxis
-            yAxisId="temperature"
-            domain={[20, 30]}
-            unit="°C"
-            width={52}
-            tick={{ fill: '#6b7280', fontSize: 12 }}
-          />
-          <YAxis
-            yAxisId="humidity"
-            orientation="right"
-            domain={[70, 100]}
-            unit="%"
-            width={48}
-            tick={{ fill: '#6b7280', fontSize: 12 }}
-          />
-          <Tooltip />
-          <Legend />
-          <Line
-            yAxisId="temperature"
-            type="monotone"
-            dataKey="temperature"
-            name="Nhiệt độ (°C)"
-            stroke="#dc2626"
-            strokeWidth={2}
-            dot={false}
-            activeDot={{ r: 5 }}
-          />
-          <Line
-            yAxisId="humidity"
-            type="monotone"
-            dataKey="humidity"
-            name="Độ ẩm (%)"
-            stroke="#0f766e"
-            strokeWidth={2}
-            dot={false}
-            activeDot={{ r: 5 }}
-          />
-        </LineChart>
-      </ResponsiveContainer>
+    <Card className="environment-chart-card">
+      <div className="chart-card-header">
+        <div>
+          <Typography.Title level={4}>Biến động trong ngày</Typography.Title>
+          <Typography.Text type="secondary">
+            Nhiệt độ và độ ẩm trong 24 giờ gần nhất
+          </Typography.Text>
+        </div>
+        <span className="chart-status">
+          <CheckCircleFilled aria-hidden="true" />
+          Dữ liệu ổn định
+        </span>
+      </div>
+
+      <div
+        className="environment-chart"
+        role="img"
+        aria-label="Biểu đồ nhiệt độ và độ ẩm trong 24 giờ. Hiện tại nhiệt độ 25,6 độ C và độ ẩm 87 phần trăm."
+      >
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart
+            data={data}
+            margin={{ top: 20, right: 12, left: 0, bottom: 0 }}
+          >
+            <CartesianGrid
+              vertical={false}
+              strokeDasharray="4 4"
+              stroke="#dfe9e2"
+            />
+            <XAxis
+              dataKey="time"
+              axisLine={false}
+              tickLine={false}
+              minTickGap={28}
+              tick={{ fill: '#687a6d', fontSize: 12 }}
+              dy={10}
+            />
+            <YAxis
+              yAxisId="temperature"
+              domain={[20, 30]}
+              unit="°"
+              width={40}
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: '#687a6d', fontSize: 12 }}
+            />
+            <YAxis
+              yAxisId="humidity"
+              orientation="right"
+              domain={[70, 100]}
+              unit="%"
+              width={42}
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: '#687a6d', fontSize: 12 }}
+            />
+            <Tooltip
+              contentStyle={{
+                border: '1px solid #dce8df',
+                borderRadius: 6,
+                boxShadow: '0 10px 30px rgb(23 51 33 / 12%)',
+              }}
+            />
+            <Legend wrapperStyle={{ paddingTop: 20 }} />
+            <Line
+              yAxisId="temperature"
+              type="monotone"
+              dataKey="temperature"
+              name="Nhiệt độ (°C)"
+              stroke="#c2413b"
+              strokeWidth={2.5}
+              dot={false}
+              activeDot={{ r: 5, strokeWidth: 3, stroke: '#ffffff' }}
+              isAnimationActive={false}
+            />
+            <Line
+              yAxisId="humidity"
+              type="monotone"
+              dataKey="humidity"
+              name="Độ ẩm (%)"
+              stroke="#0f766e"
+              strokeWidth={2.5}
+              strokeDasharray="7 5"
+              dot={false}
+              activeDot={{ r: 5, strokeWidth: 3, stroke: '#ffffff' }}
+              isAnimationActive={false}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
     </Card>
   )
 }

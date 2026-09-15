@@ -4,7 +4,7 @@ import {
   CheckCircleOutlined,
   InboxOutlined,
 } from '@ant-design/icons'
-import { Card, Col, Row, Statistic } from 'antd'
+import { Card, Col, Row } from 'antd'
 import type { ReactNode } from 'react'
 
 interface QuickSummaryStatsProps {
@@ -14,12 +14,19 @@ interface QuickSummaryStatsProps {
   activeAlerts: number
 }
 
+type MetricTone = 'forest' | 'teal' | 'amber' | 'red'
+
 interface SummaryMetric {
   title: string
   value: number
-  suffix?: string
+  suffix: string
   icon: ReactNode
-  color: string
+  tone: MetricTone
+  description: string
+}
+
+function getPercentage(value: number, total: number) {
+  return total > 0 ? Math.round((value / total) * 100) : 0
 }
 
 export function QuickSummaryStats({
@@ -32,51 +39,54 @@ export function QuickSummaryStats({
     {
       title: 'Tổng số khay nuôi',
       value: totalTrays,
-      suffix: ' khay',
+      suffix: 'khay',
       icon: <AppstoreOutlined />,
-      color: '#2563eb',
+      tone: 'forest',
+      description: 'Công suất toàn trang trại',
     },
     {
-      title: 'Khay đang hoạt động / thuê',
+      title: 'Đang vận hành',
       value: activeInUseTrays,
-      suffix: ' khay',
+      suffix: 'khay',
       icon: <CheckCircleOutlined />,
-      color: '#16a34a',
+      tone: 'teal',
+      description: `${getPercentage(activeInUseTrays, totalTrays)}% tổng công suất`,
     },
     {
-      title: 'Khay còn trống',
+      title: 'Sẵn sàng cho thuê',
       value: availableTrays,
-      suffix: ' khay',
+      suffix: 'khay',
       icon: <InboxOutlined />,
-      color: '#ca8a04',
+      tone: 'amber',
+      description: `${getPercentage(availableTrays, totalTrays)}% công suất còn trống`,
     },
     {
       title: 'Cảnh báo chờ xử lý',
       value: activeAlerts,
-      suffix: ' cảnh báo',
+      suffix: 'cảnh báo',
       icon: <AlertOutlined />,
-      color: '#dc2626',
+      tone: 'red',
+      description:
+        activeAlerts > 0 ? 'Cần kiểm tra trong hôm nay' : 'Không có sự cố mới',
     },
   ]
 
   return (
-    <Row gutter={[16, 16]}>
+    <Row className="summary-grid" gutter={[16, 16]}>
       {metrics.map((metric) => (
         <Col key={metric.title} xs={24} sm={12} xl={6}>
-          <Card style={{ height: '100%' }}>
-            <Statistic
-              title={metric.title}
-              value={metric.value}
-              suffix={metric.suffix}
-              prefix={
-                <span
-                  aria-hidden="true"
-                  style={{ color: metric.color, marginRight: 8 }}
-                >
-                  {metric.icon}
-                </span>
-              }
-            />
+          <Card className={`summary-card summary-card--${metric.tone}`}>
+            <div className="summary-card-topline">
+              <span className="summary-card-title">{metric.title}</span>
+              <span className="summary-card-icon" aria-hidden="true">
+                {metric.icon}
+              </span>
+            </div>
+            <div className="summary-card-value">
+              <strong>{metric.value}</strong>
+              <span>{metric.suffix}</span>
+            </div>
+            <div className="summary-card-description">{metric.description}</div>
           </Card>
         </Col>
       ))}

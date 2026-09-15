@@ -3,77 +3,127 @@ import {
   ApiOutlined,
   AppstoreOutlined,
   BarChartOutlined,
+  BellOutlined,
+  CloseOutlined,
   DashboardOutlined,
   FundOutlined,
+  LogoutOutlined,
+  MenuOutlined,
   SettingOutlined,
   TagsOutlined,
   TeamOutlined,
   UserOutlined,
   VideoCameraOutlined,
+  WifiOutlined,
 } from '@ant-design/icons'
-import { Layout, Menu, Typography } from 'antd'
+import {
+  Avatar,
+  Badge,
+  Button,
+  Drawer,
+  Dropdown,
+  Layout,
+  Menu,
+  Tooltip,
+  Typography,
+} from 'antd'
 import type { MenuProps } from 'antd'
+import { useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { useAuthStore } from '../../features/auth/store/auth.store'
+import { useAlertStore } from '../../stores/alert.store'
 
 const { Content, Header, Sider } = Layout
 
 const MENU_ITEMS: MenuProps['items'] = [
   {
-    key: '/',
-    icon: <DashboardOutlined />,
-    label: 'Dashboard',
+    type: 'group',
+    label: 'TỔNG QUAN',
+    children: [
+      {
+        key: '/',
+        icon: <DashboardOutlined />,
+        label: 'Dashboard',
+      },
+    ],
   },
   {
-    key: '/rooms',
-    icon: <AppstoreOutlined />,
-    label: 'Quản lý khay',
+    type: 'group',
+    label: 'VẬN HÀNH TRANG TRẠI',
+    children: [
+      {
+        key: '/rooms',
+        icon: <AppstoreOutlined />,
+        label: 'Quản lý khay',
+      },
+      {
+        key: '/devices',
+        icon: <ApiOutlined />,
+        label: 'Thiết bị IoT',
+      },
+      {
+        key: '/camera',
+        icon: <VideoCameraOutlined />,
+        label: 'Camera toàn cảnh',
+      },
+      {
+        key: '/cultivation',
+        icon: <FundOutlined />,
+        label: 'Sinh trưởng & thu hoạch',
+      },
+      {
+        key: '/alerts',
+        icon: <AlertOutlined />,
+        label: 'Cảnh báo vi khí hậu',
+      },
+      {
+        key: '/reports',
+        icon: <BarChartOutlined />,
+        label: 'Báo cáo & phân tích',
+      },
+    ],
   },
   {
-    key: '/devices',
-    icon: <ApiOutlined />,
-    label: 'Thiết bị IoT',
-  },
-  {
-    key: '/camera',
-    icon: <VideoCameraOutlined />,
-    label: 'Camera toàn cảnh',
-  },
-  {
-    key: '/packages',
-    icon: <TagsOutlined />,
-    label: 'Gói cước thuê',
-  },
-  {
-    key: '/cultivation',
-    icon: <FundOutlined />,
-    label: 'Sinh trưởng & Thu hoạch',
-  },
-  {
-    key: '/alerts',
-    icon: <AlertOutlined />,
-    label: 'Cảnh báo vi khí hậu',
-  },
-  {
-    key: '/reports',
-    icon: <BarChartOutlined />,
-    label: 'Báo cáo & Phân tích',
-  },
-  {
-    key: '/customers',
-    icon: <UserOutlined />,
-    label: 'Quản lý khách thuê',
-  },
-  {
-    key: '/users',
-    icon: <TeamOutlined />,
-    label: 'Quản lý tài khoản',
-  },
-  {
-    key: '/settings',
-    icon: <SettingOutlined />,
-    label: 'Cài đặt hệ thống',
+    type: 'group',
+    label: 'QUẢN TRỊ',
+    children: [
+      {
+        key: '/customers',
+        icon: <UserOutlined />,
+        label: 'Khách thuê',
+      },
+      {
+        key: '/packages',
+        icon: <TagsOutlined />,
+        label: 'Gói cước thuê',
+      },
+      {
+        key: '/users',
+        icon: <TeamOutlined />,
+        label: 'Tài khoản',
+      },
+      {
+        key: '/settings',
+        icon: <SettingOutlined />,
+        label: 'Cài đặt hệ thống',
+      },
+    ],
   },
 ]
+
+const PAGE_TITLES: Record<string, string> = {
+  '/': 'Tổng quan trang trại',
+  '/rooms': 'Quản lý khay nấm',
+  '/devices': 'Thiết bị IoT',
+  '/camera': 'Camera toàn cảnh',
+  '/cultivation': 'Sinh trưởng & thu hoạch',
+  '/alerts': 'Cảnh báo vi khí hậu',
+  '/reports': 'Báo cáo & phân tích',
+  '/customers': 'Quản lý khách thuê',
+  '/packages': 'Gói cước thuê',
+  '/users': 'Quản lý tài khoản',
+  '/settings': 'Cài đặt hệ thống',
+}
 
 function getSelectedMenuKey(pathname: string) {
   if (pathname.startsWith('/rooms') || pathname.startsWith('/trays')) {
@@ -84,72 +134,228 @@ function getSelectedMenuKey(pathname: string) {
     return '/customers'
   }
 
-  const matchingPath = [
-    '/devices',
-    '/camera',
-    '/packages',
-    '/cultivation',
-    '/alerts',
-    '/reports',
-    '/users',
-    '/settings',
-  ].find((path) => pathname.startsWith(path))
+  const matchingPath = Object.keys(PAGE_TITLES)
+    .filter((path) => path !== '/')
+    .find((path) => pathname.startsWith(path))
 
   return matchingPath ?? '/'
 }
 
+interface BrandProps {
+  onClose?: () => void
+}
+
+function Brand({ onClose }: BrandProps) {
+  return (
+    <div className="mcms-brand">
+      <img
+        className="mcms-brand-mark"
+        src="/mcms-mark.svg"
+        alt=""
+        width="42"
+        height="42"
+      />
+      <div className="mcms-brand-copy">
+        <strong>MCMS</strong>
+        <span>Mushroom Control</span>
+      </div>
+      {onClose && (
+        <Button
+          type="text"
+          className="mobile-nav-close"
+          icon={<CloseOutlined />}
+          aria-label="Đóng menu điều hướng"
+          onClick={onClose}
+        />
+      )}
+    </div>
+  )
+}
+
+interface NavigationPanelProps {
+  selectedKey: string
+  onNavigate: (path: string) => void
+  onClose?: () => void
+}
+
+function NavigationPanel({
+  selectedKey,
+  onNavigate,
+  onClose,
+}: NavigationPanelProps) {
+  return (
+    <div className="sidebar-panel">
+      <Brand onClose={onClose} />
+      <Menu
+        className="mcms-menu"
+        mode="inline"
+        items={MENU_ITEMS}
+        selectedKeys={[selectedKey]}
+        onClick={({ key }) => {
+          onNavigate(key)
+          onClose?.()
+        }}
+      />
+      <div className="sidebar-health" role="status">
+        <span className="sidebar-health-icon" aria-hidden="true">
+          <WifiOutlined />
+        </span>
+        <span>
+          <strong>Hệ thống ổn định</strong>
+          <small>Đồng bộ dữ liệu IoT</small>
+        </span>
+        <span className="status-pulse" aria-hidden="true" />
+      </div>
+    </div>
+  )
+}
+
 export function AdminLayout() {
+  const [isNavigationOpen, setIsNavigationOpen] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
+  const user = useAuthStore((state) => state.user)
+  const logout = useAuthStore((state) => state.logout)
+  const pendingAlerts = useAlertStore(
+    (state) => state.alerts.filter((alert) => !alert.isAcknowledged).length,
+  )
 
   const selectedMenuKey = getSelectedMenuKey(location.pathname)
+  const pageTitle = PAGE_TITLES[selectedMenuKey]
+  const initials =
+    user?.name
+      .split(' ')
+      .slice(-2)
+      .map((part) => part[0])
+      .join('')
+      .toUpperCase() ?? 'MC'
+
+  const accountItems: MenuProps['items'] = [
+    {
+      key: 'account',
+      disabled: true,
+      label: (
+        <div className="account-menu-copy">
+          <strong>{user?.name ?? 'Quản trị viên MCMS'}</strong>
+          <span>{user?.email ?? 'admin@mcms.vn'}</span>
+        </div>
+      ),
+    },
+    { type: 'divider' },
+    {
+      key: 'logout',
+      danger: true,
+      icon: <LogoutOutlined />,
+      label: 'Đăng xuất',
+    },
+  ]
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login', { replace: true })
+  }
 
   return (
-    <Layout style={{ minHeight: '100dvh' }}>
-      <Sider width={232} breakpoint="lg" collapsedWidth={0}>
-        <div
-          style={{
-            height: 64,
-            display: 'flex',
-            alignItems: 'center',
-            padding: '0 24px',
-            color: '#ffffff',
-            fontSize: 20,
-            fontWeight: 700,
-          }}
+    <>
+      <a className="skip-link" href="#main-content">
+        Chuyển đến nội dung chính
+      </a>
+      <Layout className="mcms-app-shell">
+        <Sider
+          className="mcms-sider"
+          width={272}
+          breakpoint="lg"
+          collapsedWidth={0}
+          trigger={null}
         >
-          MCMS Admin
-        </div>
+          <NavigationPanel
+            selectedKey={selectedMenuKey}
+            onNavigate={navigate}
+          />
+        </Sider>
 
-        <Menu
-          theme="dark"
-          mode="inline"
-          items={MENU_ITEMS}
-          selectedKeys={[selectedMenuKey]}
-          onClick={({ key }) => navigate(key)}
-        />
-      </Sider>
-
-      <Layout>
-        <Header
-          style={{
-            height: 64,
-            display: 'flex',
-            alignItems: 'center',
-            padding: '0 24px',
-            background: '#ffffff',
-            borderBottom: '1px solid #f0f0f0',
-          }}
+        <Drawer
+          className="mobile-nav-drawer"
+          placement="left"
+          size={284}
+          open={isNavigationOpen}
+          closable={false}
+          styles={{ body: { padding: 0 } }}
+          onClose={() => setIsNavigationOpen(false)}
         >
-          <Typography.Title level={4} style={{ margin: 0 }}>
-            Hệ thống quản lý trang trại nấm
-          </Typography.Title>
-        </Header>
+          <NavigationPanel
+            selectedKey={selectedMenuKey}
+            onNavigate={navigate}
+            onClose={() => setIsNavigationOpen(false)}
+          />
+        </Drawer>
 
-        <Content style={{ padding: 24, background: '#f5f7f8' }}>
-          <Outlet />
-        </Content>
+        <Layout className="mcms-main-layout">
+          <Header className="mcms-header">
+            <div className="header-leading">
+              <Button
+                type="text"
+                className="mobile-menu-trigger"
+                icon={<MenuOutlined />}
+                aria-label="Mở menu điều hướng"
+                onClick={() => setIsNavigationOpen(true)}
+              />
+              <div className="header-title-block">
+                <span>MCMS ADMIN</span>
+                <Typography.Title level={4}>{pageTitle}</Typography.Title>
+              </div>
+            </div>
+
+            <div className="header-actions">
+              <div className="header-online-status" role="status">
+                <span className="status-pulse" aria-hidden="true" />
+                Hệ thống trực tuyến
+              </div>
+              <Tooltip title="Xem cảnh báo">
+                <Badge count={pendingAlerts} size="small" overflowCount={99}>
+                  <Button
+                    type="text"
+                    className="header-icon-button"
+                    icon={<BellOutlined />}
+                    aria-label={`${pendingAlerts} cảnh báo đang chờ xử lý`}
+                    onClick={() => navigate('/alerts')}
+                  />
+                </Badge>
+              </Tooltip>
+              <Dropdown
+                trigger={['click']}
+                menu={{
+                  items: accountItems,
+                  onClick: ({ key }) => key === 'logout' && handleLogout(),
+                }}
+              >
+                <Button
+                  type="text"
+                  className="account-trigger"
+                  aria-label="Mở menu tài khoản"
+                >
+                  <Avatar className="account-avatar">{initials}</Avatar>
+                  <span className="account-trigger-copy">
+                    <strong>{user?.name ?? 'Quản trị viên'}</strong>
+                    <small>Quản trị hệ thống</small>
+                  </span>
+                </Button>
+              </Dropdown>
+            </div>
+          </Header>
+
+          <Content className="mcms-content">
+            <main
+              id="main-content"
+              className="admin-content-inner page-enter"
+              key={location.pathname}
+              tabIndex={-1}
+            >
+              <Outlet />
+            </main>
+          </Content>
+        </Layout>
       </Layout>
-    </Layout>
+    </>
   )
 }
