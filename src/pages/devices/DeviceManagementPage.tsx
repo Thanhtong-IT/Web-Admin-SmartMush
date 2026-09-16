@@ -2,8 +2,11 @@ import { useEffect, useState } from 'react'
 import {
   ApiOutlined,
   BulbOutlined,
+  CameraOutlined,
   CloudOutlined,
+  HistoryOutlined,
   ReloadOutlined,
+  SettingOutlined,
   ThunderboltOutlined,
   WifiOutlined,
 } from '@ant-design/icons'
@@ -14,18 +17,27 @@ import {
   Space,
   Switch,
   Tag,
+  Tooltip,
   Typography,
   message,
 } from 'antd'
+import { useNavigate } from 'react-router-dom'
 import { useDeviceStore } from '../../stores/device.store'
 import { useRoomStore } from '../../stores/room.store'
+import { useSettingStore } from '../../stores/setting.store'
 import type {
   DeviceStatus,
   GatewayRelayKey,
   Rs485Node,
 } from '../../types/device.types'
+import type { TierId } from '../../types/room.types'
 import { TRAY_POSITIONS } from '../../types/room.types'
 import { DeviceMetricsGrid } from './components/DeviceMetricsGrid'
+import { FloorCameraModal } from './components/FloorCameraModal'
+import { FloorClimateConfigModal } from './components/FloorClimateConfigModal'
+import {
+  calculateFloorTargetThresholds,
+} from './utils/floor-climate.utils'
 
 const STATUS_CONFIG: Record<
   DeviceStatus,
@@ -52,12 +64,23 @@ function formatTimestamp(timestamp: string) {
 }
 
 export function DeviceManagementPage() {
+  const navigate = useNavigate()
   const gateway = useDeviceStore((state) => state.gateway)
   const nodes = useDeviceStore((state) => state.nodes)
+  const camera = useDeviceStore((state) => state.camera)
   const toggleGatewayRelay = useDeviceStore((state) => state.toggleGatewayRelay)
   const pingNode = useDeviceStore((state) => state.pingNode)
   const restartNode = useDeviceStore((state) => state.restartNode)
+  const floorClimateConfigs = useDeviceStore(
+    (state) => state.floorClimateConfigs,
+  )
+  const updateFloorClimateConfig = useDeviceStore(
+    (state) => state.updateFloorClimateConfig,
+  )
   const tiers = useRoomStore((state) => state.tiers)
+  const thresholdProfiles = useSettingStore(
+    (state) => state.thresholdProfiles,
+  )
   const telemetrySimulationEnabled = useRoomStore(
     (state) => state.telemetrySimulationEnabled,
   )
@@ -68,6 +91,12 @@ export function DeviceManagementPage() {
   const toggleTierFan = useRoomStore((state) => state.toggleTierFan)
   const toggleTrayValve = useRoomStore((state) => state.toggleTrayValve)
   const [pendingAction, setPendingAction] = useState<string | null>(null)
+  const [cameraFloor, setCameraFloor] = useState<TierId | null>(null)
+  const [climateConfigFloor, setClimateConfigFloor] =
+    useState<TierId | null>(null)
+
+  const selectedClimateTier =
+    tiers.find((tier) => tier.tierId === climateConfigFloor) ?? null
 
   useEffect(() => {
     if (!telemetrySimulationEnabled) {
@@ -117,15 +146,23 @@ export function DeviceManagementPage() {
           </Typography.Text>
         </div>
 
-        <Space>
-          <Typography.Text>Giả lập telemetry</Typography.Text>
-          <Switch
-            checked={telemetrySimulationEnabled}
-            onChange={setTelemetrySimulationEnabled}
-            checkedChildren="Bật"
-            unCheckedChildren="Tắt"
-          />
-        </Space>
+        <Flex align="center" gap={16} wrap>
+          <Button
+            icon={<HistoryOutlined />}
+            onClick={() => navigate('/devices/history')}
+          >
+            Lịch sử Telemetry
+          </Button>
+          <Space>
+            <Typography.Text>Giả lập telemetry</Typography.Text>
+            <Switch
+              checked={telemetrySimulationEnabled}
+              onChange={setTelemetrySimulationEnabled}
+              checkedChildren="Bật"
+              unCheckedChildren="Tắt"
+            />
+          </Space>
+        </Flex>
       </Flex>
 
       <Card
@@ -199,6 +236,10 @@ export function DeviceManagementPage() {
 
           const status = STATUS_CONFIG[node.status]
           const isUnavailable = node.status === 'OFFLINE' || node.status === 'ERROR'
+          const floorThresholds = calculateFloorTargetThresholds(
+            tier.trays,
+            thresholdProfiles,
+          )
 
           return (
             <section key={node.id} className="device-tier-section">
@@ -217,13 +258,28 @@ export function DeviceManagementPage() {
                   </Typography.Text>
                 </div>
 
-                <Space>
+                <Space wrap>
                   <Button
                     icon={<ApiOutlined />}
                     loading={pendingAction === `${node.id}:ping`}
                     onClick={() => void handleNodeAction(node, 'ping')}
                   >
                     Ping
+                  </Button>
+                  <Tooltip title={`Xem camera ${tier.name}`}>
+                    <Button
+                      className="floor-camera-trigger"
+                      icon={<CameraOutlined />}
+                      aria-label={`Xem camera ${tier.name}`}
+                      onClick={() => setCameraFloor(tier.tierId)}
+                    />
+                  </Tooltip>
+                  <Button
+                    className="floor-climate-config-trigger"
+                    icon={<SettingOutlined />}
+                    onClick={() => setClimateConfigFloor(tier.tierId)}
+                  >
+                    Cấu hình AUTO
                   </Button>
                   <Button
                     icon={<ReloadOutlined />}
@@ -235,7 +291,10 @@ export function DeviceManagementPage() {
                 </Space>
               </Flex>
 
-              <DeviceMetricsGrid telemetry={tier.telemetry} />
+              <DeviceMetricsGrid
+                telemetry={tier.telemetry}
+                thresholds={floorThresholds}
+              />
 
               <Flex gap={24} wrap style={{ marginTop: 16 }}>
                 <Flex vertical gap={6} align="center">
@@ -267,6 +326,31 @@ export function DeviceManagementPage() {
           )
         })}
       </Flex>
+
+      <FloorCameraModal
+        key={cameraFloor ?? 'floor-camera-closed'}
+        camera={camera}
+        tiers={tiers}
+        floorNumber={cameraFloor}
+        onClose={() => setCameraFloor(null)}
+        onFloorChange={setCameraFloor}
+      />
+
+      {selectedClimateTier && (
+        <FloorClimateConfigModal
+          key={selectedClimateTier.tierId}
+          open
+          floorName={selectedClimateTier.name}
+          config={floorClimateConfigs[selectedClimateTier.tierId]}
+          trays={selectedClimateTier.trays}
+          mushroomProfiles={thresholdProfiles}
+          onCancel={() => setClimateConfigFloor(null)}
+          onSubmit={(values) => {
+            updateFloorClimateConfig(selectedClimateTier.tierId, values)
+            setClimateConfigFloor(null)
+          }}
+        />
+      )}
     </div>
   )
 }

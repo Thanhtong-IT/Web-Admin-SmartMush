@@ -1,10 +1,13 @@
 import { create } from 'zustand'
 import type {
   CameraConfig,
+  FloorClimateConfig,
+  FloorClimateThresholdValues,
   GatewayMaster,
   GatewayRelayKey,
   Rs485Node,
 } from '../types/device.types'
+import type { TierId } from '../types/room.types'
 
 export const MOCK_GATEWAY_MASTER: GatewayMaster = {
   id: 'gateway-esp32-s3-master',
@@ -83,13 +86,41 @@ export const MOCK_OVERVIEW_CAMERA: CameraConfig = {
   lastSnapshotUrl: null,
 }
 
+function createFloorClimateConfig(tierId: TierId): FloorClimateConfig {
+  return {
+    tierId,
+    mode: 'AUTO',
+    tempMin: 20,
+    tempMax: 28,
+    humidityMin: 75,
+    humidityMax: 95,
+    co2Max: 1000,
+    updatedAt: '2026-09-12T09:30:00+07:00',
+  }
+}
+
+export const MOCK_FLOOR_CLIMATE_CONFIGS: Record<
+  TierId,
+  FloorClimateConfig
+> = {
+  1: createFloorClimateConfig(1),
+  2: createFloorClimateConfig(2),
+  3: createFloorClimateConfig(3),
+  4: createFloorClimateConfig(4),
+}
+
 interface DeviceState {
   gateway: GatewayMaster
   nodes: Rs485Node[]
   camera: CameraConfig
+  floorClimateConfigs: Record<TierId, FloorClimateConfig>
   toggleGatewayRelay: (relay: GatewayRelayKey) => void
   pingNode: (nodeId: Rs485Node['id']) => void
   restartNode: (nodeId: Rs485Node['id']) => void
+  updateFloorClimateConfig: (
+    tierId: TierId,
+    values: FloorClimateThresholdValues,
+  ) => void
   takeSnapshot: () => string
 }
 
@@ -101,6 +132,7 @@ export const useDeviceStore = create<DeviceState>((set) => ({
   gateway: MOCK_GATEWAY_MASTER,
   nodes: MOCK_RS485_NODES,
   camera: MOCK_OVERVIEW_CAMERA,
+  floorClimateConfigs: MOCK_FLOOR_CLIMATE_CONFIGS,
 
   toggleGatewayRelay: (relay) =>
     set((state) => ({
@@ -141,6 +173,18 @@ export const useDeviceStore = create<DeviceState>((set) => ({
             }
           : node,
       ),
+    })),
+
+  updateFloorClimateConfig: (tierId, values) =>
+    set((state) => ({
+      floorClimateConfigs: {
+        ...state.floorClimateConfigs,
+        [tierId]: {
+          ...state.floorClimateConfigs[tierId],
+          ...values,
+          updatedAt: getNow(),
+        },
+      },
     })),
 
   takeSnapshot: () => {

@@ -43,6 +43,11 @@ export function DashboardPage() {
       totalTrays: trays.length,
       activeInUseTrays,
       availableTrays: trays.filter((tray) => tray.status === 'empty').length,
+      // Khay đang cách ly / nhiễm bệnh — hiển thị dưới dạng badge nhỏ trên
+      // thẻ "Sẵn sàng cho thuê" để giữ tổng số khay luôn bảo toàn đúng 12.
+      maintenanceTrays: trays.filter(
+        (tray) => tray.status === 'maintenance',
+      ).length,
       activeAlerts,
       averageTemperature:
         tierCount > 0
@@ -92,7 +97,13 @@ export function DashboardPage() {
         </div>
       </header>
 
-      <QuickSummaryStats {...summary} />
+      <QuickSummaryStats
+        totalTrays={summary.totalTrays}
+        activeInUseTrays={summary.activeInUseTrays}
+        availableTrays={summary.availableTrays}
+        maintenanceTrays={summary.maintenanceTrays}
+        activeAlerts={summary.activeAlerts}
+      />
 
       <section className="dashboard-section" aria-labelledby="environment-heading">
         <div className="section-heading-row">

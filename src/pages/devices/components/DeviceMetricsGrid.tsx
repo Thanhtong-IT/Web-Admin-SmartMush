@@ -1,14 +1,18 @@
 import type { ReactNode } from 'react'
 import {
+  CheckCircleOutlined,
   CloudOutlined,
   CloudServerOutlined,
   FireOutlined,
+  WarningOutlined,
 } from '@ant-design/icons'
-import { Card, Col, Row, Statistic, Tag } from 'antd'
+import { Card, Col, Row, Statistic, Tag, Tooltip } from 'antd'
 import type { TierTelemetry } from '../../../types/room.types'
+import type { FloorTargetThresholds } from '../utils/floor-climate.utils'
 
 interface DeviceMetricsGridProps {
   telemetry: TierTelemetry
+  thresholds: FloorTargetThresholds
 }
 
 type MetricTone = 'normal' | 'warning' | 'danger'
@@ -18,15 +22,22 @@ interface MetricDefinition {
   title: string
   unit: string
   icon: ReactNode
-  normalRange: string
-  getTone: (value: number) => MetricTone
+  getTargetLabel: (thresholds: FloorTargetThresholds) => string
+  getTone: (
+    value: number,
+    thresholds: FloorTargetThresholds,
+  ) => MetricTone
   precision?: number
 }
 
 const TONE_CONFIG: Record<MetricTone, { color: string; label: string }> = {
-  normal: { color: '#16803b', label: 'Bình thường' },
-  warning: { color: '#b45309', label: 'Cận ngưỡng' },
-  danger: { color: '#c81e1e', label: 'Nguy hiểm' },
+  normal: { color: 'var(--mcms-primary)', label: 'Bình thường' },
+  warning: { color: 'var(--mcms-amber)', label: 'Cận ngưỡng' },
+  danger: { color: 'var(--mcms-coral)', label: 'Nguy hiểm' },
+}
+
+function formatThresholdValue(value: number) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1)
 }
 
 const METRICS: MetricDefinition[] = [
@@ -35,12 +46,13 @@ const METRICS: MetricDefinition[] = [
     title: 'Nhiệt độ tầng',
     unit: '°C',
     icon: <FireOutlined />,
-    normalRange: '20-28°C',
+    getTargetLabel: (thresholds) =>
+      `Mục tiêu TB: ${formatThresholdValue(thresholds.tempMin)} - ${formatThresholdValue(thresholds.tempMax)}°C`,
     precision: 1,
-    getTone: (value) =>
-      value < 18 || value > 32
+    getTone: (value, thresholds) =>
+      value < thresholds.tempMin - 2 || value > thresholds.tempMax + 2
         ? 'danger'
-        : value < 20 || value > 28
+        : value < thresholds.tempMin || value > thresholds.tempMax
           ? 'warning'
           : 'normal',
   },
@@ -49,11 +61,12 @@ const METRICS: MetricDefinition[] = [
     title: 'Độ ẩm tầng',
     unit: '%RH',
     icon: <CloudOutlined />,
-    normalRange: '75-95%RH',
-    getTone: (value) =>
-      value < 60 || value > 98
+    getTargetLabel: (thresholds) =>
+      `Mục tiêu TB: ${formatThresholdValue(thresholds.humidityMin)} - ${formatThresholdValue(thresholds.humidityMax)}%RH`,
+    getTone: (value, thresholds) =>
+      value < thresholds.humidityMin - 10 || value > thresholds.humidityMax + 3
         ? 'danger'
-        : value < 75 || value > 95
+        : value < thresholds.humidityMin || value > thresholds.humidityMax
           ? 'warning'
           : 'normal',
   },
@@ -62,23 +75,50 @@ const METRICS: MetricDefinition[] = [
     title: 'Nồng độ CO₂',
     unit: 'ppm',
     icon: <CloudServerOutlined />,
-    normalRange: '400-850ppm',
-    getTone: (value) =>
-      value > 1200 ? 'danger' : value > 850 ? 'warning' : 'normal',
+    getTargetLabel: (thresholds) =>
+      `Ngưỡng an toàn: < ${formatThresholdValue(thresholds.co2Max)} ppm`,
+    getTone: (value, thresholds) =>
+      value > thresholds.co2Max * 1.3
+        ? 'danger'
+        : value > thresholds.co2Max
+          ? 'warning'
+          : 'normal',
   },
 ]
 
-export function DeviceMetricsGrid({ telemetry }: DeviceMetricsGridProps) {
+function getThresholdSourceTooltip(thresholds: FloorTargetThresholds) {
+  if (thresholds.source === 'SYSTEM_DEFAULT') {
+    return `Tầng chưa có mẻ đang trồng. Đang dùng profile mặc định: ${thresholds.defaultProfileName}.`
+  }
+
+  const fallbackNote =
+    thresholds.missingProfileMushroomTypes.length > 0
+      ? ` Chưa có profile cho ${thresholds.missingProfileMushroomTypes.join(', ')}, hệ thống dùng profile mặc định thay thế.`
+      : ''
+
+  return `Được tính trung bình từ ${thresholds.activeTrayCount} giống nấm đang trồng: ${thresholds.mushroomTypes.join(', ')}.${fallbackNote}`
+}
+
+export function DeviceMetricsGrid({
+  telemetry,
+  thresholds,
+}: DeviceMetricsGridProps) {
+  const thresholdSourceTooltip = getThresholdSourceTooltip(thresholds)
+  const varianceWarning =
+    'Có độ lệch sinh thái giữa các khay, nên cân nhắc gom giống tương đồng.'
+
   return (
     <Row gutter={[10, 10]}>
       {METRICS.map((metric) => {
         const value = telemetry[metric.key]
-        const tone = metric.getTone(value)
+        const tone = metric.getTone(value, thresholds)
         const toneConfig = TONE_CONFIG[tone]
+        const targetLabel = metric.getTargetLabel(thresholds)
 
         return (
           <Col key={metric.key} xs={24} sm={8}>
             <Card
+              className="device-metric-card"
               size="small"
               style={{ height: '100%', borderTop: `3px solid ${toneConfig.color}` }}
             >
@@ -93,18 +133,51 @@ export function DeviceMetricsGrid({ telemetry }: DeviceMetricsGridProps) {
                   </span>
                 }
               />
-              <Tag
-                color={
-                  tone === 'normal'
-                    ? 'success'
-                    : tone === 'warning'
-                      ? 'warning'
-                      : 'error'
-                }
-                style={{ marginTop: 8 }}
-              >
-                {toneConfig.label} · {metric.normalRange}
-              </Tag>
+              <div className="device-metric-status-row">
+                <span
+                  className={`device-metric-tone device-metric-tone--${tone}`}
+                >
+                  {tone === 'normal' ? (
+                    <CheckCircleOutlined aria-hidden="true" />
+                  ) : (
+                    <WarningOutlined aria-hidden="true" />
+                  )}
+                  {toneConfig.label}
+                </span>
+                <div className="device-metric-target-row">
+                  <Tooltip title={thresholdSourceTooltip}>
+                    <span
+                      className="device-metric-target-trigger"
+                      tabIndex={0}
+                    >
+                      <Tag
+                        className="device-metric-target-tag"
+                        color={
+                          tone === 'normal'
+                            ? 'success'
+                            : tone === 'warning'
+                              ? 'warning'
+                              : 'error'
+                        }
+                      >
+                        {targetLabel}
+                      </Tag>
+                    </span>
+                  </Tooltip>
+                  {thresholds.hasEcologicalVariance && (
+                    <Tooltip title={varianceWarning}>
+                      <span
+                        className="device-metric-variance-warning"
+                        role="img"
+                        tabIndex={0}
+                        aria-label={varianceWarning}
+                      >
+                        <WarningOutlined aria-hidden="true" />
+                      </span>
+                    </Tooltip>
+                  )}
+                </div>
+              </div>
             </Card>
           </Col>
         )

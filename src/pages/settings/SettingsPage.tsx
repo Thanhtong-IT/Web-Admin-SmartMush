@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react'
-import { SettingOutlined } from '@ant-design/icons'
-import { Flex, Tabs, Tag, Typography, message } from 'antd'
+import {
+  BulbOutlined,
+  ExperimentOutlined,
+  SafetyCertificateOutlined,
+} from '@ant-design/icons'
+import { Card, Flex, Space, Tag, Typography, message } from 'antd'
 import { useAuthStore } from '../../features/auth/store/auth.store'
 import { useTenantStore } from '../../features/tenants/store/tenant.store'
 import { useCultivationStore } from '../../stores/cultivation.store'
 import { useSettingStore } from '../../stores/setting.store'
-import { NotificationConfigTab } from './components/NotificationConfigTab'
-import { SystemConfigTab } from './components/SystemConfigTab'
 import { ThresholdProfileModal } from './components/ThresholdProfileModal'
 import { ThresholdProfileTab } from './components/ThresholdProfileTab'
 import type {
@@ -16,7 +18,6 @@ import type {
 
 function normalizeRole(role: string | undefined) {
   const normalizedRole = role?.toUpperCase()
-
   return normalizedRole === 'FARM_MANAGER' ? 'OPERATOR' : normalizedRole
 }
 
@@ -32,6 +33,7 @@ export function SettingsPage() {
   const role = normalizeRole(authUser?.role)
   const isAdmin = role === 'ADMIN'
   const canEditThresholds = isAdmin || role === 'OPERATOR'
+
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
   const [editingProfile, setEditingProfile] =
     useState<MushroomThresholdProfile | null>(null)
@@ -90,48 +92,46 @@ export function SettingsPage() {
       >
         <div>
           <Typography.Title level={3} style={{ margin: 0 }}>
-            Cài đặt hệ thống
+            <ExperimentOutlined /> Hồ sơ Vi khí hậu &amp; Ngưỡng AUTO
           </Typography.Title>
           <Typography.Text type="secondary">
-            Quản lý ngưỡng vi khí hậu, kết nối IoT và kênh thông báo
+            Thiết lập dải thông số nhiệt độ, độ ẩm và CO₂ chuẩn cho từng giống nấm
+            để áp dụng tự động cho các tầng nuôi trồng.
           </Typography.Text>
         </div>
 
-        <Tag icon={<SettingOutlined />} color={isAdmin ? 'processing' : 'default'}>
-          {isAdmin
-            ? 'ADMIN · Toàn quyền'
-            : role === 'OPERATOR'
-              ? 'OPERATOR · Chỉnh ngưỡng'
-              : 'CUSTOMER · Chỉ xem'}
-        </Tag>
+        <Space wrap>
+          <Tag
+            icon={<SafetyCertificateOutlined />}
+            color={isAdmin ? 'success' : 'default'}
+          >
+            {isAdmin
+              ? 'ADMIN · Toàn quyền'
+              : role === 'OPERATOR'
+                ? 'OPERATOR · Chỉnh ngưỡng'
+                : 'CUSTOMER · Chỉ xem'}
+          </Tag>
+          <Tag icon={<BulbOutlined />} color="processing">
+            Chế độ AUTO
+          </Tag>
+        </Space>
       </Flex>
 
-      <Tabs
-        items={[
-          {
-            key: 'thresholds',
-            label: 'Ngưỡng Vi khí hậu',
-            children: (
-              <ThresholdProfileTab
-                canEdit={canEditThresholds}
-                visibleMushroomTypes={visibleMushroomTypes}
-                onAdd={handleAddProfile}
-                onEdit={handleEditProfile}
-              />
-            ),
-          },
-          {
-            key: 'system',
-            label: 'Cấu hình Thiết bị & IoT',
-            children: <SystemConfigTab canEdit={isAdmin} />,
-          },
-          {
-            key: 'notifications',
-            label: 'Kênh Thông báo',
-            children: <NotificationConfigTab canEdit={isAdmin} />,
-          },
-        ]}
-      />
+      <Card
+        style={{
+          borderRadius: 12,
+          borderColor: '#e5e7eb',
+          background: 'linear-gradient(135deg, #f0fdf4 0%, #f8fafc 100%)',
+        }}
+        styles={{ body: { padding: 20 } }}
+      >
+        <ThresholdProfileTab
+          canEdit={canEditThresholds}
+          visibleMushroomTypes={visibleMushroomTypes}
+          onAdd={handleAddProfile}
+          onEdit={handleEditProfile}
+        />
+      </Card>
 
       {canEditThresholds && (
         <ThresholdProfileModal

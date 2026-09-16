@@ -62,8 +62,10 @@ export function RackView({ tiers, selectedTrayId, onSelectTray }: RackViewProps)
                   <TrayStatusTag status={tray.status} />
                 </Flex>
                 <span className="rack-tray-meta">
-                  {tray.customerId
-                    ? `Khách: ${tray.customerId}`
+                  {tray.rental
+                    ? `${tray.batchId ?? 'Mẻ đang chạy'} · ${tray.rental.tenantName} · ${tray.rental.mushroomType}`
+                    : tray.customerId
+                      ? `Khách: ${tray.customerId}`
                     : tray.batchId
                       ? `Mẻ: ${tray.batchId}`
                       : 'Sẵn sàng tiếp nhận'}

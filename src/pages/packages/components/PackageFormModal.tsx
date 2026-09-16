@@ -18,6 +18,8 @@ interface PackageFormModalProps {
 }
 
 const BILLING_CYCLE_OPTIONS = [
+  { value: 'WEEKLY', label: 'Theo tuần (7 ngày)' },
+  { value: 'BIWEEKLY', label: 'Theo 2 tuần (14 ngày)' },
   { value: 'MONTHLY', label: 'Theo tháng' },
   { value: 'CROP_CYCLE', label: 'Theo vụ mùa' },
   { value: 'QUARTERLY', label: 'Theo quý' },
@@ -195,6 +197,32 @@ export function PackageFormModal({
         >
           <Switch checkedChildren="Có" unCheckedChildren="Không" />
         </Form.Item>
+
+        <Space.Compact block>
+          <Form.Item
+            label="Phí giao nhận (VNĐ)"
+            name="deliveryFee"
+            style={{ flex: 1 }}
+          >
+            <InputNumber
+              min={0}
+              precision={0}
+              style={{ width: '100%' }}
+              placeholder="0 = Miễn phí"
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="Chính sách giao nhận"
+            name="deliveryPolicy"
+            style={{ flex: 2 }}
+          >
+            <Input
+              placeholder="Ví dụ: Miễn phí giao nhận. Khách tự đến vườn hái."
+              maxLength={255}
+            />
+          </Form.Item>
+        </Space.Compact>
 
         <Form.List
           name="supportedMushrooms"

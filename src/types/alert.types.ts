@@ -6,6 +6,8 @@ export type AlertCategory =
   | 'CO2'
   | 'DEVICE_OFFLINE'
   | 'HARDWARE_FAULT'
+  | 'ORDER_OVERDUE'
+  | 'CONTAMINATION'
 
 export type AlertReadFilter = 'ALL' | 'UNREAD' | 'READ'
 export type AlertAcknowledgementFilter =

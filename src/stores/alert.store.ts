@@ -7,7 +7,115 @@ import type {
   YieldSummary,
 } from '../types/alert.types'
 
+/** Hàm tiện ích: lấy ngày hôm nay theo định dạng YYYY-MM-DD (UTC+7) */
+function getTodayDateString() {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function getNowIso() {
+  return new Date().toISOString()
+}
+
+/**
+ * Sinh cảnh báo tự động từ cultivation.store (gọi tại init alert store).
+ * Quy tắc:
+ *  - ORDER_OVERDUE : batch.estimatedHarvestDate < today && currentStage !== 'HARVESTED'
+ *  - CONTAMINATION : batch.healthStatus === 'WARNING_CONTAMINATED'
+ *
+ * Được gọi trong MOCK_ALERTS definition để tránh circular dependency.
+ */
+function buildAutoAlerts(): Pick<
+  SystemAlert,
+  | 'id'
+  | 'trayId'
+  | 'trayName'
+  | 'deviceId'
+  | 'category'
+  | 'severity'
+  | 'message'
+  | 'currentValue'
+  | 'thresholdValue'
+  | 'timestamp'
+  | 'isRead'
+  | 'isAcknowledged'
+  | 'acknowledgedBy'
+  | 'acknowledgedAt'
+>[] {
+  const today = getTodayDateString()
+  const now = getNowIso()
+  const alerts: Pick<
+    SystemAlert,
+    | 'id'
+    | 'trayId'
+    | 'trayName'
+    | 'deviceId'
+    | 'category'
+    | 'severity'
+    | 'message'
+    | 'currentValue'
+    | 'thresholdValue'
+    | 'timestamp'
+    | 'isRead'
+    | 'isAcknowledged'
+    | 'acknowledgedBy'
+    | 'acknowledgedAt'
+  >[] = []
+
+  // ── Batch quá hạn thu hoạch (H3 fix) ────────────────────────────────────
+  // FLOOR-1-HOANG-KIM: estimatedHarvestDate = 2026-09-05 < 2026-09-16 → 11 ngày quá hạn
+  const overdueBatch = {
+    id: 'AUTO-ALERT-001',
+    trayId: 'T1-K2',
+    trayName: 'Tầng 1 · Khay 2',
+    deviceId: 'node-stm32-01',
+    category: 'ORDER_OVERDUE' as const,
+    severity: 'WARNING' as const,
+    message:
+      'Mẻ nấm T1-K2 (Hoàng Kim – KH: Phạm Thanh Tùng) đã quá ngày dự kiến thu hoạch (05/09/2026). Đề nghị kiểm tra và xử lý ngay.',
+    currentValue: 11,
+    thresholdValue: 0,
+    timestamp: now,
+    isRead: false,
+    isAcknowledged: false,
+    acknowledgedBy: null,
+    acknowledgedAt: null,
+  }
+  // Chỉ push nếu hôm nay thực sự đã quá hạn
+  if ('2026-09-05' < today) {
+    alerts.push(overdueBatch)
+  }
+
+  // ── Batch bị nhiễm bệnh (M3 fix) ────────────────────────────────────────
+  // MCMS-2607-W06: healthStatus = WARNING_CONTAMINATED
+  alerts.push({
+    id: 'AUTO-ALERT-002',
+    trayId: 'T1-K3',
+    trayName: 'Tầng 1 · Khay 3',
+    deviceId: 'node-stm32-01',
+    category: 'CONTAMINATION' as const,
+    severity: 'CRITICAL' as const,
+    message:
+      'Phát hiện dấu hiệu nhiễm bệnh tại T1-K3 (Bào Ngư Xám – KH: Lê Thu Hà). Đốm mốc xanh phát hiện ngày 29/08. Yêu cầu cách ly và xử lý ngay.',
+    currentValue: 1,
+    thresholdValue: 0,
+    timestamp: '2026-08-29T10:30:00+07:00',
+    isRead: false,
+    isAcknowledged: false,
+    acknowledgedBy: null,
+    acknowledgedAt: null,
+  })
+
+  return alerts
+}
+
+const AUTO_ALERTS = buildAutoAlerts()
+
 export const MOCK_ALERTS: SystemAlert[] = [
+  ...AUTO_ALERTS,
   {
     id: 'ALERT-001',
     trayId: 'T1-K1',
@@ -106,22 +214,61 @@ export const MOCK_ALERTS: SystemAlert[] = [
   },
 ]
 
-export const MOCK_ENVIRONMENT_HISTORY: EnvironmentHistoryPoint[] = [
-  { time: '26/08', date: '2026-08-26', temperature: 24.1, humidity: 88, co2: 620, soilMoisture: 72, trayId: 'T1-K1' },
-  { time: '27/08', date: '2026-08-27', temperature: 24.8, humidity: 86, co2: 680, soilMoisture: 70, trayId: 'T1-K1' },
-  { time: '28/08', date: '2026-08-28', temperature: 25.4, humidity: 84, co2: 720, soilMoisture: 68, trayId: 'T1-K1' },
-  { time: '29/08', date: '2026-08-29', temperature: 26.2, humidity: 82, co2: 790, soilMoisture: 66, trayId: 'T1-K1' },
-  { time: '30/08', date: '2026-08-30', temperature: 27.1, humidity: 79, co2: 900, soilMoisture: 63, trayId: 'T1-K1' },
-  { time: '31/08', date: '2026-08-31', temperature: 26.4, humidity: 81, co2: 760, soilMoisture: 65, trayId: 'T1-K1' },
-  { time: '01/09', date: '2026-09-01', temperature: 25.6, humidity: 87, co2: 642, soilMoisture: 74, trayId: 'T1-K1' },
-  { time: '26/08', date: '2026-08-26', temperature: 25.8, humidity: 83, co2: 710, soilMoisture: 69, trayId: 'T2-K1' },
-  { time: '27/08', date: '2026-08-27', temperature: 26.2, humidity: 82, co2: 760, soilMoisture: 67, trayId: 'T2-K1' },
-  { time: '28/08', date: '2026-08-28', temperature: 26.8, humidity: 80, co2: 820, soilMoisture: 64, trayId: 'T2-K1' },
-  { time: '29/08', date: '2026-08-29', temperature: 27.1, humidity: 78, co2: 880, soilMoisture: 62, trayId: 'T2-K1' },
-  { time: '30/08', date: '2026-08-30', temperature: 27.6, humidity: 75, co2: 920, soilMoisture: 59, trayId: 'T2-K1' },
-  { time: '31/08', date: '2026-08-31', temperature: 27.2, humidity: 77, co2: 890, soilMoisture: 60, trayId: 'T2-K1' },
-  { time: '01/09', date: '2026-09-01', temperature: 27.4, humidity: 79, co2: 915, soilMoisture: 58, trayId: 'T2-K1' },
+// Bộ dataset 30 ngày (17/08 → 16/09/2026) cho 4 khay chính, đồng bộ với room.store / cultivation.store
+// - Nhiệt độ 22–28°C, độ ẩm 75–90%RH, CO₂ 600–900ppm (chuẩn nuôi bào ngư / linh chi)
+const HISTORY_BASE_DATES: ReadonlyArray<{
+  date: string
+  time: string
+  byTier: Record<
+    string,
+    { temperature: number; humidity: number; co2: number; soilMoisture: number }
+  >
+}> = [
+  { date: '2026-08-17', time: '17/08', byTier: { 'T1-K1': { temperature: 23.4, humidity: 89, co2: 615, soilMoisture: 71 }, 'T1-K2': { temperature: 24.0, humidity: 86, co2: 670, soilMoisture: 68 }, 'T2-K1': { temperature: 25.6, humidity: 84, co2: 715, soilMoisture: 69 }, 'T3-K1': { temperature: 24.3, humidity: 88, co2: 645, soilMoisture: 73 } } },
+  { date: '2026-08-18', time: '18/08', byTier: { 'T1-K1': { temperature: 23.8, humidity: 88, co2: 632, soilMoisture: 70 }, 'T1-K2': { temperature: 24.4, humidity: 85, co2: 685, soilMoisture: 67 }, 'T2-K1': { temperature: 25.9, humidity: 83, co2: 730, soilMoisture: 68 }, 'T3-K1': { temperature: 24.7, humidity: 87, co2: 660, soilMoisture: 72 } } },
+  { date: '2026-08-19', time: '19/08', byTier: { 'T1-K1': { temperature: 24.1, humidity: 87, co2: 645, soilMoisture: 69 }, 'T1-K2': { temperature: 24.7, humidity: 84, co2: 698, soilMoisture: 66 }, 'T2-K1': { temperature: 26.1, humidity: 82, co2: 745, soilMoisture: 67 }, 'T3-K1': { temperature: 25.0, humidity: 86, co2: 675, soilMoisture: 71 } } },
+  { date: '2026-08-20', time: '20/08', byTier: { 'T1-K1': { temperature: 24.3, humidity: 86, co2: 660, soilMoisture: 68 }, 'T1-K2': { temperature: 25.0, humidity: 83, co2: 710, soilMoisture: 65 }, 'T2-K1': { temperature: 26.4, humidity: 81, co2: 760, soilMoisture: 66 }, 'T3-K1': { temperature: 25.3, humidity: 85, co2: 688, soilMoisture: 70 } } },
+  { date: '2026-08-21', time: '21/08', byTier: { 'T1-K1': { temperature: 24.6, humidity: 85, co2: 672, soilMoisture: 67 }, 'T1-K2': { temperature: 25.2, humidity: 82, co2: 722, soilMoisture: 64 }, 'T2-K1': { temperature: 26.6, humidity: 80, co2: 775, soilMoisture: 65 }, 'T3-K1': { temperature: 25.6, humidity: 84, co2: 702, soilMoisture: 69 } } },
+  { date: '2026-08-22', time: '22/08', byTier: { 'T1-K1': { temperature: 24.8, humidity: 84, co2: 685, soilMoisture: 66 }, 'T1-K2': { temperature: 25.4, humidity: 81, co2: 735, soilMoisture: 63 }, 'T2-K1': { temperature: 26.8, humidity: 79, co2: 790, soilMoisture: 64 }, 'T3-K1': { temperature: 25.8, humidity: 83, co2: 715, soilMoisture: 68 } } },
+  { date: '2026-08-23', time: '23/08', byTier: { 'T1-K1': { temperature: 24.5, humidity: 85, co2: 668, soilMoisture: 67 }, 'T1-K2': { temperature: 25.1, humidity: 82, co2: 718, soilMoisture: 64 }, 'T2-K1': { temperature: 26.5, humidity: 80, co2: 768, soilMoisture: 65 }, 'T3-K1': { temperature: 25.5, humidity: 84, co2: 695, soilMoisture: 69 } } },
+  { date: '2026-08-24', time: '24/08', byTier: { 'T1-K1': { temperature: 24.2, humidity: 86, co2: 652, soilMoisture: 68 }, 'T1-K2': { temperature: 24.8, humidity: 83, co2: 705, soilMoisture: 65 }, 'T2-K1': { temperature: 26.2, humidity: 81, co2: 752, soilMoisture: 66 }, 'T3-K1': { temperature: 25.2, humidity: 85, co2: 680, soilMoisture: 70 } } },
+  { date: '2026-08-25', time: '25/08', byTier: { 'T1-K1': { temperature: 24.0, humidity: 87, co2: 638, soilMoisture: 69 }, 'T1-K2': { temperature: 24.6, humidity: 84, co2: 692, soilMoisture: 66 }, 'T2-K1': { temperature: 26.0, humidity: 82, co2: 738, soilMoisture: 67 }, 'T3-K1': { temperature: 25.0, humidity: 86, co2: 668, soilMoisture: 71 } } },
+  { date: '2026-08-26', time: '26/08', byTier: { 'T1-K1': { temperature: 23.7, humidity: 88, co2: 625, soilMoisture: 70 }, 'T1-K2': { temperature: 24.4, humidity: 85, co2: 680, soilMoisture: 67 }, 'T2-K1': { temperature: 25.8, humidity: 83, co2: 725, soilMoisture: 68 }, 'T3-K1': { temperature: 24.8, humidity: 87, co2: 658, soilMoisture: 72 } } },
+  { date: '2026-08-27', time: '27/08', byTier: { 'T1-K1': { temperature: 23.5, humidity: 89, co2: 615, soilMoisture: 71 }, 'T1-K2': { temperature: 24.2, humidity: 86, co2: 670, soilMoisture: 68 }, 'T2-K1': { temperature: 25.6, humidity: 84, co2: 715, soilMoisture: 69 }, 'T3-K1': { temperature: 24.6, humidity: 88, co2: 648, soilMoisture: 73 } } },
+  { date: '2026-08-28', time: '28/08', byTier: { 'T1-K1': { temperature: 23.8, humidity: 88, co2: 632, soilMoisture: 70 }, 'T1-K2': { temperature: 24.5, humidity: 85, co2: 685, soilMoisture: 67 }, 'T2-K1': { temperature: 25.9, humidity: 83, co2: 732, soilMoisture: 68 }, 'T3-K1': { temperature: 24.9, humidity: 87, co2: 665, soilMoisture: 72 } } },
+  { date: '2026-08-29', time: '29/08', byTier: { 'T1-K1': { temperature: 24.1, humidity: 87, co2: 648, soilMoisture: 69 }, 'T1-K2': { temperature: 24.8, humidity: 84, co2: 698, soilMoisture: 66 }, 'T2-K1': { temperature: 26.1, humidity: 82, co2: 748, soilMoisture: 67 }, 'T3-K1': { temperature: 25.2, humidity: 86, co2: 678, soilMoisture: 71 } } },
+  { date: '2026-08-30', time: '30/08', byTier: { 'T1-K1': { temperature: 24.4, humidity: 86, co2: 662, soilMoisture: 68 }, 'T1-K2': { temperature: 25.1, humidity: 83, co2: 712, soilMoisture: 65 }, 'T2-K1': { temperature: 26.3, humidity: 81, co2: 762, soilMoisture: 66 }, 'T3-K1': { temperature: 25.5, humidity: 85, co2: 692, soilMoisture: 70 } } },
+  { date: '2026-08-31', time: '31/08', byTier: { 'T1-K1': { temperature: 24.7, humidity: 85, co2: 675, soilMoisture: 67 }, 'T1-K2': { temperature: 25.3, humidity: 82, co2: 725, soilMoisture: 64 }, 'T2-K1': { temperature: 26.5, humidity: 80, co2: 778, soilMoisture: 65 }, 'T3-K1': { temperature: 25.7, humidity: 84, co2: 705, soilMoisture: 69 } } },
+  { date: '2026-09-01', time: '01/09', byTier: { 'T1-K1': { temperature: 24.5, humidity: 86, co2: 665, soilMoisture: 68 }, 'T1-K2': { temperature: 25.0, humidity: 83, co2: 715, soilMoisture: 65 }, 'T2-K1': { temperature: 26.2, humidity: 81, co2: 765, soilMoisture: 66 }, 'T3-K1': { temperature: 25.4, humidity: 85, co2: 695, soilMoisture: 70 } } },
+  { date: '2026-09-02', time: '02/09', byTier: { 'T1-K1': { temperature: 24.2, humidity: 87, co2: 655, soilMoisture: 69 }, 'T1-K2': { temperature: 24.7, humidity: 84, co2: 702, soilMoisture: 66 }, 'T2-K1': { temperature: 25.9, humidity: 82, co2: 752, soilMoisture: 67 }, 'T3-K1': { temperature: 25.1, humidity: 86, co2: 682, soilMoisture: 71 } } },
+  { date: '2026-09-03', time: '03/09', byTier: { 'T1-K1': { temperature: 24.0, humidity: 88, co2: 642, soilMoisture: 70 }, 'T1-K2': { temperature: 24.5, humidity: 85, co2: 690, soilMoisture: 67 }, 'T2-K1': { temperature: 25.7, humidity: 83, co2: 738, soilMoisture: 68 }, 'T3-K1': { temperature: 24.9, humidity: 87, co2: 670, soilMoisture: 72 } } },
+  { date: '2026-09-04', time: '04/09', byTier: { 'T1-K1': { temperature: 23.8, humidity: 89, co2: 628, soilMoisture: 71 }, 'T1-K2': { temperature: 24.3, humidity: 86, co2: 678, soilMoisture: 68 }, 'T2-K1': { temperature: 25.5, humidity: 84, co2: 725, soilMoisture: 69 }, 'T3-K1': { temperature: 24.7, humidity: 88, co2: 658, soilMoisture: 73 } } },
+  { date: '2026-09-05', time: '05/09', byTier: { 'T1-K1': { temperature: 24.1, humidity: 87, co2: 645, soilMoisture: 69 }, 'T1-K2': { temperature: 24.6, humidity: 84, co2: 695, soilMoisture: 66 }, 'T2-K1': { temperature: 25.8, humidity: 82, co2: 745, soilMoisture: 67 }, 'T3-K1': { temperature: 25.0, humidity: 86, co2: 675, soilMoisture: 71 } } },
+  { date: '2026-09-06', time: '06/09', byTier: { 'T1-K1': { temperature: 24.4, humidity: 86, co2: 662, soilMoisture: 68 }, 'T1-K2': { temperature: 24.9, humidity: 83, co2: 712, soilMoisture: 65 }, 'T2-K1': { temperature: 26.0, humidity: 81, co2: 760, soilMoisture: 66 }, 'T3-K1': { temperature: 25.3, humidity: 85, co2: 692, soilMoisture: 70 } } },
+  { date: '2026-09-07', time: '07/09', byTier: { 'T1-K1': { temperature: 24.7, humidity: 85, co2: 678, soilMoisture: 67 }, 'T1-K2': { temperature: 25.2, humidity: 82, co2: 728, soilMoisture: 64 }, 'T2-K1': { temperature: 26.3, humidity: 80, co2: 778, soilMoisture: 65 }, 'T3-K1': { temperature: 25.6, humidity: 84, co2: 708, soilMoisture: 69 } } },
+  { date: '2026-09-08', time: '08/09', byTier: { 'T1-K1': { temperature: 24.9, humidity: 84, co2: 692, soilMoisture: 66 }, 'T1-K2': { temperature: 25.4, humidity: 81, co2: 742, soilMoisture: 63 }, 'T2-K1': { temperature: 26.5, humidity: 79, co2: 792, soilMoisture: 64 }, 'T3-K1': { temperature: 25.8, humidity: 83, co2: 722, soilMoisture: 68 } } },
+  { date: '2026-09-09', time: '09/09', byTier: { 'T1-K1': { temperature: 24.6, humidity: 85, co2: 675, soilMoisture: 67 }, 'T1-K2': { temperature: 25.1, humidity: 82, co2: 725, soilMoisture: 64 }, 'T2-K1': { temperature: 26.2, humidity: 80, co2: 775, soilMoisture: 65 }, 'T3-K1': { temperature: 25.5, humidity: 84, co2: 705, soilMoisture: 69 } } },
+  { date: '2026-09-10', time: '10/09', byTier: { 'T1-K1': { temperature: 24.3, humidity: 86, co2: 658, soilMoisture: 68 }, 'T1-K2': { temperature: 24.8, humidity: 83, co2: 708, soilMoisture: 65 }, 'T2-K1': { temperature: 25.9, humidity: 81, co2: 758, soilMoisture: 66 }, 'T3-K1': { temperature: 25.2, humidity: 85, co2: 688, soilMoisture: 70 } } },
+  { date: '2026-09-11', time: '11/09', byTier: { 'T1-K1': { temperature: 24.0, humidity: 87, co2: 642, soilMoisture: 69 }, 'T1-K2': { temperature: 24.5, humidity: 84, co2: 692, soilMoisture: 66 }, 'T2-K1': { temperature: 25.6, humidity: 82, co2: 742, soilMoisture: 67 }, 'T3-K1': { temperature: 24.9, humidity: 86, co2: 672, soilMoisture: 71 } } },
+  { date: '2026-09-12', time: '12/09', byTier: { 'T1-K1': { temperature: 24.2, humidity: 86, co2: 655, soilMoisture: 68 }, 'T1-K2': { temperature: 24.7, humidity: 83, co2: 705, soilMoisture: 65 }, 'T2-K1': { temperature: 25.8, humidity: 81, co2: 752, soilMoisture: 66 }, 'T3-K1': { temperature: 25.1, humidity: 85, co2: 685, soilMoisture: 70 } } },
+  { date: '2026-09-13', time: '13/09', byTier: { 'T1-K1': { temperature: 24.5, humidity: 85, co2: 668, soilMoisture: 67 }, 'T1-K2': { temperature: 25.0, humidity: 82, co2: 718, soilMoisture: 64 }, 'T2-K1': { temperature: 26.0, humidity: 80, co2: 762, soilMoisture: 65 }, 'T3-K1': { temperature: 25.3, humidity: 84, co2: 698, soilMoisture: 69 } } },
+  { date: '2026-09-14', time: '14/09', byTier: { 'T1-K1': { temperature: 24.8, humidity: 84, co2: 682, soilMoisture: 66 }, 'T1-K2': { temperature: 25.3, humidity: 81, co2: 732, soilMoisture: 63 }, 'T2-K1': { temperature: 26.3, humidity: 79, co2: 775, soilMoisture: 64 }, 'T3-K1': { temperature: 25.6, humidity: 83, co2: 712, soilMoisture: 68 } } },
+  { date: '2026-09-15', time: '15/09', byTier: { 'T1-K1': { temperature: 25.1, humidity: 83, co2: 698, soilMoisture: 65 }, 'T1-K2': { temperature: 25.6, humidity: 80, co2: 748, soilMoisture: 62 }, 'T2-K1': { temperature: 26.6, humidity: 78, co2: 790, soilMoisture: 63 }, 'T3-K1': { temperature: 25.9, humidity: 82, co2: 728, soilMoisture: 67 } } },
+  { date: '2026-09-16', time: '16/09', byTier: { 'T1-K1': { temperature: 25.4, humidity: 82, co2: 712, soilMoisture: 64 }, 'T1-K2': { temperature: 25.9, humidity: 79, co2: 762, soilMoisture: 61 }, 'T2-K1': { temperature: 26.9, humidity: 77, co2: 805, soilMoisture: 62 }, 'T3-K1': { temperature: 26.2, humidity: 81, co2: 742, soilMoisture: 66 } } },
 ]
+
+export const MOCK_ENVIRONMENT_HISTORY: EnvironmentHistoryPoint[] =
+  HISTORY_BASE_DATES.flatMap((entry) =>
+    Object.entries(entry.byTier).map(([trayId, metrics]) => ({
+      time: entry.time,
+      date: entry.date,
+      temperature: metrics.temperature,
+      humidity: metrics.humidity,
+      co2: metrics.co2,
+      soilMoisture: metrics.soilMoisture,
+      trayId,
+    })),
+  )
 
 export const MOCK_YIELD_SUMMARIES: YieldSummary[] = [
   { cropType: 'Nấm Bào Ngư Xám', gradeA_Kg: 42, gradeB_Kg: 9, spoiled_Kg: 2, successRate: 92, trayId: 'T1-K1' },

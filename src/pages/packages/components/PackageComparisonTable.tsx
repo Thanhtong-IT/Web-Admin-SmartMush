@@ -36,6 +36,8 @@ interface PackageComparisonTableProps {
 }
 
 const BILLING_CYCLE_LABELS: Record<BillingCycle, string> = {
+  WEEKLY: 'Theo tuần',
+  BIWEEKLY: 'Theo 2 tuần',
   MONTHLY: 'Theo tháng',
   CROP_CYCLE: 'Theo vụ mùa',
   QUARTERLY: 'Theo quý',

@@ -30,6 +30,8 @@ interface PackageCardProps {
 }
 
 const BILLING_CYCLE_LABELS: Record<BillingCycle, string> = {
+  WEEKLY: 'Theo tuần',
+  BIWEEKLY: 'Theo 2 tuần',
   MONTHLY: 'Theo tháng',
   CROP_CYCLE: 'Theo vụ mùa',
   QUARTERLY: 'Theo quý',
@@ -128,6 +130,17 @@ export function PackageCard({
               </Flex>
             )}
           </Space>
+
+          {rentalPackage.deliveryPolicy && (
+            <>
+              <Typography.Text strong style={{ display: 'block', marginTop: 18 }}>
+                Chính sách giao nhận
+              </Typography.Text>
+              <Typography.Text type="secondary" style={{ display: 'block', marginTop: 6, fontSize: 13 }}>
+                {rentalPackage.deliveryPolicy}
+              </Typography.Text>
+            </>
+          )}
 
           <Flex gap={8} wrap style={{ marginTop: 'auto', paddingTop: 20 }}>
             {canManage ? (

@@ -1,0 +1,11 @@
+# Project Overview
+- Project: mcms-web-admin (IoT / Telemetry monitoring admin dashboard).
+- Tech stack: React, TypeScript, Tailwind CSS, Recharts, Vite.
+- Architecture: Feature-based (`src/features/...`, `components/`, `routes/`, `stores/`).
+
+# Guidelines
+- Strictly adhere to existing code structure, patterns, and type definitions.
+- Do not refactor unrelated files or functions.
+- Do not install new packages unless explicitly requested.
+- Use strict TypeScript; reuse interfaces/types in `types/`.
+- Keep explanations minimal: output clean, direct diffs without unnecessary chit-chat.

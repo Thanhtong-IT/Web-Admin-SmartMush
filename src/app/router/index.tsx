@@ -5,10 +5,13 @@ import { RoomListPage } from '../../features/rooms/pages/RoomListPage'
 import { TenantListPage } from '../../features/tenants/pages/TenantListPage'
 import { CameraOverviewPage } from '../../pages/camera/CameraOverviewPage'
 import { DeviceManagementPage } from '../../pages/devices/DeviceManagementPage'
+import { IoTHistoryPage } from '../../pages/devices/IoTHistoryPage'
+import { OrderManagementPage } from '../../pages/orders/OrderManagementPage'
 import { PackageManagementPage } from '../../pages/packages/PackageManagementPage'
 import { CultivationManagementPage } from '../../pages/cultivation/CultivationManagementPage'
 import { AlertManagementPage } from '../../pages/alerts/AlertManagementPage'
 import { ReportsAnalyticsPage } from '../../pages/reports/ReportsAnalyticsPage'
+import { ReportsErrorBoundary } from '../../pages/reports/components/ReportsErrorBoundary'
 import { UserManagementPage } from '../../pages/users/UserManagementPage'
 import { SettingsPage } from '../../pages/settings/SettingsPage'
 import { AdminLayout } from '../layouts/AdminLayout'
@@ -53,8 +56,20 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'devices/history',
+        element: (
+          <RoleGuard allowedRoles={['ADMIN', 'OPERATOR']}>
+            <IoTHistoryPage />
+          </RoleGuard>
+        ),
+      },
+      {
         path: 'packages',
         element: <PackageManagementPage />,
+      },
+      {
+        path: 'orders',
+        element: <OrderManagementPage />,
       },
       {
         path: 'cultivation',
@@ -66,7 +81,11 @@ export const router = createBrowserRouter([
       },
       {
         path: 'reports',
-        element: <ReportsAnalyticsPage />,
+        element: (
+          <ReportsErrorBoundary moduleName="Báo cáo & Phân tích">
+            <ReportsAnalyticsPage />
+          </ReportsErrorBoundary>
+        ),
       },
       {
         path: 'customers',

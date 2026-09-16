@@ -6,10 +6,11 @@ import {
   BellOutlined,
   CloseOutlined,
   DashboardOutlined,
+  ExperimentOutlined,
   FundOutlined,
   LogoutOutlined,
   MenuOutlined,
-  SettingOutlined,
+  OrderedListOutlined,
   TagsOutlined,
   TeamOutlined,
   UserOutlined,
@@ -93,6 +94,11 @@ const MENU_ITEMS: MenuProps['items'] = [
         label: 'Khách thuê',
       },
       {
+        key: '/orders',
+        icon: <OrderedListOutlined />,
+        label: 'Đơn đặt từ App',
+      },
+      {
         key: '/packages',
         icon: <TagsOutlined />,
         label: 'Gói cước thuê',
@@ -104,8 +110,8 @@ const MENU_ITEMS: MenuProps['items'] = [
       },
       {
         key: '/settings',
-        icon: <SettingOutlined />,
-        label: 'Cài đặt hệ thống',
+        icon: <ExperimentOutlined />,
+        label: 'Hồ sơ Vi khí hậu',
       },
     ],
   },
@@ -120,9 +126,10 @@ const PAGE_TITLES: Record<string, string> = {
   '/alerts': 'Cảnh báo vi khí hậu',
   '/reports': 'Báo cáo & phân tích',
   '/customers': 'Quản lý khách thuê',
+  '/orders': 'Quản lý đơn đặt',
   '/packages': 'Gói cước thuê',
   '/users': 'Quản lý tài khoản',
-  '/settings': 'Cài đặt hệ thống',
+  '/settings': 'Hồ sơ Vi khí hậu',
 }
 
 function getSelectedMenuKey(pathname: string) {
@@ -221,7 +228,9 @@ export function AdminLayout() {
   )
 
   const selectedMenuKey = getSelectedMenuKey(location.pathname)
-  const pageTitle = PAGE_TITLES[selectedMenuKey]
+  const pageTitle = location.pathname.startsWith('/devices/history')
+    ? 'Lịch sử Telemetry IoT'
+    : PAGE_TITLES[selectedMenuKey]
   const initials =
     user?.name
       .split(' ')

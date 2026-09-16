@@ -25,6 +25,7 @@ export function ThresholdProfileModal({
 
     form.resetFields()
     form.setFieldsValue({
+      cycleWeeks: 1,
       tempMin: 20,
       tempMax: 28,
       humidityMin: 75,
@@ -121,6 +122,15 @@ export function ThresholdProfileModal({
           ]}
         >
           <Input placeholder="Profile tiêu chuẩn" maxLength={120} />
+        </Form.Item>
+
+        <Form.Item
+          label="Chu kỳ gói (tuần)"
+          name="cycleWeeks"
+          tooltip="Số tuần của gói nuôi trồng — đồng bộ với Pricing Model"
+          rules={[{ required: true, message: 'Vui lòng nhập chu kỳ.' }]}
+        >
+          <InputNumber min={1} max={12} style={{ width: '100%' }} addonAfter="tuần" />
         </Form.Item>
 
         <Space.Compact block>

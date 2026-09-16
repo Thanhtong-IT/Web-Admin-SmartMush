@@ -2,15 +2,18 @@ import {
   AlertOutlined,
   AppstoreOutlined,
   CheckCircleOutlined,
+  ExperimentOutlined,
   InboxOutlined,
 } from '@ant-design/icons'
-import { Card, Col, Row } from 'antd'
+import { Card, Col, Row, Tag } from 'antd'
 import type { ReactNode } from 'react'
 
 interface QuickSummaryStatsProps {
   totalTrays: number
   activeInUseTrays: number
   availableTrays: number
+  /** Khay đang cách ly / nhiễm bệnh / maintenance — hiển thị badge phụ */
+  maintenanceTrays: number
   activeAlerts: number
 }
 
@@ -22,7 +25,7 @@ interface SummaryMetric {
   suffix: string
   icon: ReactNode
   tone: MetricTone
-  description: string
+  description: ReactNode
 }
 
 function getPercentage(value: number, total: number) {
@@ -33,6 +36,7 @@ export function QuickSummaryStats({
   totalTrays,
   activeInUseTrays,
   availableTrays,
+  maintenanceTrays,
   activeAlerts,
 }: QuickSummaryStatsProps) {
   const metrics: SummaryMetric[] = [
@@ -58,7 +62,23 @@ export function QuickSummaryStats({
       suffix: 'khay',
       icon: <InboxOutlined />,
       tone: 'amber',
-      description: `${getPercentage(availableTrays, totalTrays)}% công suất còn trống`,
+      description: (
+        <span className="summary-card-description-row">
+          <span>
+            {availableTrays} khay trống ·{' '}
+            {getPercentage(availableTrays, totalTrays)}% còn trống
+          </span>
+          {maintenanceTrays > 0 && (
+            <Tag
+              color="red"
+              icon={<ExperimentOutlined />}
+              className="summary-card-maintenance-badge"
+            >
+              {maintenanceTrays} khay đang xử lý bệnh
+            </Tag>
+          )}
+        </span>
+      ),
     },
     {
       title: 'Cảnh báo chờ xử lý',

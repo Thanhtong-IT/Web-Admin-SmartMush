@@ -1,149 +1,236 @@
-import {
-  ApiOutlined,
-  CloudOutlined,
-  FireOutlined,
-  ThunderboltOutlined,
-} from '@ant-design/icons'
-import {
-  Descriptions,
-  Drawer,
-  Flex,
-  Space,
-  Statistic,
-  Switch,
-  Tag,
-  Typography,
-} from 'antd'
-import { useDeviceStore } from '../../../stores/device.store'
+import { ApiOutlined } from '@ant-design/icons'
+import { App as AntdApp, Drawer, Empty, Flex, Tag } from 'antd'
+import { useState } from 'react'
 import { useRoomStore } from '../../../stores/room.store'
-import { getTrayPosition } from '../../../types/room.types'
 import type { Tier } from '../../../types/room.types'
 import { useTenantStore } from '../../tenants/store/tenant.store'
+import { calculateRentalLifecycle } from '../utils/tray-rental.utils'
+import { RentalLifecycleSection } from './RentalLifecycleSection'
+import type { ClosureDialogAction } from './TrayClosureReasonModal'
+import { TrayClosureReasonModal } from './TrayClosureReasonModal'
+import type { InvoiceMode } from './TrayInvoiceModal'
+import { TrayInvoiceModal } from './TrayInvoiceModal'
+import { TrayStaffActionWorkflow } from './TrayStaffActionWorkflow'
 import { TrayStatusTag } from './TrayStatusTag'
 
 interface TrayDetailDrawerProps {
   trayId: string | null
   onClose: () => void
+  currentDate?: Date
 }
 
-export function TrayDetailDrawer({ trayId, onClose }: TrayDetailDrawerProps) {
+interface InvoiceRequest {
+  mode: InvoiceMode
+  reason: string
+}
+
+function joinReason(reason: string, note: string) {
+  return note ? `${reason}: ${note}` : reason
+}
+
+export function TrayDetailDrawer({
+  trayId,
+  onClose,
+  currentDate,
+}: TrayDetailDrawerProps) {
+  const { message } = AntdApp.useApp()
+  const [dialogAction, setDialogAction] =
+    useState<ClosureDialogAction | null>(null)
+  const [invoiceRequest, setInvoiceRequest] =
+    useState<InvoiceRequest | null>(null)
   const tiers = useRoomStore((state) => state.tiers)
-  const toggleTierFan = useRoomStore((state) => state.toggleTierFan)
-  const toggleTrayValve = useRoomStore((state) => state.toggleTrayValve)
+  const closeTraySession = useRoomStore((state) => state.closeTraySession)
+  const confirmTrayCustomerContact = useRoomStore(
+    (state) => state.confirmTrayCustomerContact,
+  )
+  const addTrayCareLog = useRoomStore((state) => state.addTrayCareLog)
   const tenants = useTenantStore((state) => state.tenants)
-  const nodes = useDeviceStore((state) => state.nodes)
 
   const detail = findTrayDetail(tiers, trayId)
-
+  const rental = detail?.tray.rental ?? null
+  const effectiveCurrentDate = currentDate ?? new Date()
+  const lifecycle = rental
+    ? calculateRentalLifecycle(rental, effectiveCurrentDate)
+    : null
   const customer = detail?.tray.customerId
     ? tenants.find((tenant) => tenant.id === detail.tray.customerId)
     : undefined
-  const node = detail
-    ? nodes.find((item) => item.id === detail.tier.nodeId)
-    : undefined
-  const trayPosition = detail ? getTrayPosition(detail.tray.code) : null
-  const isNodeUnavailable =
-    !node || node.status === 'OFFLINE' || node.status === 'ERROR'
+
+  const handleClose = () => {
+    setDialogAction(null)
+    setInvoiceRequest(null)
+    onClose()
+  }
+
+  const handleReasonConfirmation = async (values: {
+    reason: string
+    note: string
+  }) => {
+    if (!detail || !rental || !lifecycle || !dialogAction) return
+
+    await new Promise((resolve) => window.setTimeout(resolve, 350))
+    const reason = joinReason(values.reason, values.note)
+
+    if (dialogAction === 'EARLY_HARVEST') {
+      setDialogAction(null)
+      setInvoiceRequest({ mode: 'EARLY_HARVEST', reason })
+      message.success(
+        'Đã ghi nhận yêu cầu thu hoạch sớm. Hãy nhập cân nặng thực tế.',
+      )
+      return
+    }
+
+    closeTraySession({
+      trayId: detail.tray.id,
+      outcome: 'FORCED_CANCEL',
+      reason,
+    })
+    setDialogAction(null)
+    onClose()
+    message.success('Đã đóng mẻ, ghi nhận tiêu hủy và giải phóng khay.')
+  }
+
+  const handleOpenInvoice = (mode: InvoiceMode, reason: string) => {
+    setInvoiceRequest({ mode, reason })
+  }
+
+  const handleCompleteInvoice = async (actualHarvestWeightKg: number) => {
+    if (!detail || !rental || !invoiceRequest) return
+
+    await new Promise((resolve) => window.setTimeout(resolve, 450))
+
+    closeTraySession({
+      trayId: detail.tray.id,
+      outcome: invoiceRequest.mode,
+      reason: invoiceRequest.reason,
+      actualHarvestWeightKg,
+    })
+    setInvoiceRequest(null)
+    onClose()
+    message.success(
+      `Đã ghi nhận ${actualHarvestWeightKg} kg, hoàn tất bàn giao và giải phóng khay.`,
+    )
+  }
 
   return (
-    <Drawer
-      title={detail ? `Chi tiết khay ${detail.tray.code}` : 'Chi tiết khay'}
-      width={520}
-      open={Boolean(detail)}
-      onClose={onClose}
-      destroyOnHidden
-    >
-      {detail && trayPosition && (
-        <Flex vertical gap={24}>
-          <Flex align="center" justify="space-between" gap={12} wrap>
-            <TrayStatusTag status={detail.tray.status} />
-            <Tag color={node?.status === 'ONLINE' ? 'success' : 'warning'}>
-              RS485 {node?.status ?? 'UNKNOWN'}
-            </Tag>
-          </Flex>
-
-          <Descriptions column={1} size="small" bordered>
-            <Descriptions.Item label="Tầng">
-              {detail.tier.name}
-            </Descriptions.Item>
-            <Descriptions.Item label="Node phụ trách">
-              <ApiOutlined /> {detail.tier.nodeId}
-            </Descriptions.Item>
-            <Descriptions.Item label="Khách thuê">
-              {customer ? `${customer.name} · ${customer.phone}` : 'Chưa có khách thuê'}
-            </Descriptions.Item>
-            <Descriptions.Item label="Mẻ trồng">
-              {detail.tray.batchId ?? 'Chưa có mẻ trồng'}
-            </Descriptions.Item>
-          </Descriptions>
-
-          <div>
-            <Typography.Title level={5} style={{ marginTop: 0 }}>
-              Vi khí hậu tại {detail.tier.name}
-            </Typography.Title>
-            <div className="tray-drawer-metrics">
-              <Statistic
-                title="Nhiệt độ"
-                value={detail.tier.telemetry.temperature}
-                precision={1}
-                suffix="°C"
-                prefix={<FireOutlined />}
-              />
-              <Statistic
-                title="Độ ẩm"
-                value={detail.tier.telemetry.humidity}
-                suffix="%RH"
-                prefix={<CloudOutlined />}
-              />
-              <Statistic
-                title="CO₂"
-                value={detail.tier.telemetry.co2}
-                suffix="ppm"
-              />
+    <>
+      <Drawer
+        rootClassName="tray-detail-drawer"
+        title={
+          <div className="tray-drawer-title">
+            <strong>Chi tiết khay nấm</strong>
+            <span>
+              {detail
+                ? `${detail.tray.code} · ${detail.tier.name}`
+                : 'Thông tin vận hành'}
+            </span>
+          </div>
+        }
+        size={680}
+        open={Boolean(detail)}
+        onClose={handleClose}
+        destroyOnHidden
+        styles={{ body: { padding: 0 } }}
+      >
+        {detail && (
+          <div className="tray-detail-content">
+            <div className="tray-context-bar">
+              <Flex align="center" gap={8} wrap>
+                <TrayStatusTag status={detail.tray.status} />
+                {detail.tray.batchId && (
+                  <Tag color="processing">{detail.tray.batchId}</Tag>
+                )}
+              </Flex>
+              <div className="tray-context-meta">
+                <span>
+                  <small>Tầng vận hành</small>
+                  <strong>{detail.tier.name}</strong>
+                </span>
+                <span>
+                  <small>Node phụ trách</small>
+                  <strong>
+                    <ApiOutlined aria-hidden="true" /> {detail.tier.nodeId}
+                  </strong>
+                </span>
+              </div>
             </div>
-          </div>
 
-          <div className="tray-relay-panel">
-            <Typography.Title level={5} style={{ marginTop: 0 }}>
-              Điều khiển relay
-            </Typography.Title>
-            {isNodeUnavailable && (
-              <Typography.Paragraph type="danger">
-                Node không khả dụng, các lệnh điều khiển đang bị khóa.
-              </Typography.Paragraph>
+            {rental && lifecycle ? (
+              <>
+                <RentalLifecycleSection
+                  batchId={detail.tray.batchId}
+                  rental={rental}
+                  lifecycle={lifecycle}
+                />
+                <TrayStaffActionWorkflow
+                  rental={rental}
+                  lifecycle={lifecycle}
+                  contactConfirmed={
+                    rental.customerContactStatus === 'DELIVERY_CONFIRMED'
+                  }
+                  latestCareLog={rental.careLogs[0]}
+                  onContactConfirmed={() => {
+                    confirmTrayCustomerContact(detail.tray.id)
+                    message.success(
+                      'Đã xác nhận hẹn ngày 7 giao với khách hàng.',
+                    )
+                  }}
+                  onEarlyHarvest={() => setDialogAction('EARLY_HARVEST')}
+                  onHarvest={() =>
+                    handleOpenInvoice(
+                      'ON_TIME_HARVEST',
+                      'Thu hoạch đúng hạn theo lịch của mẻ trồng.',
+                    )
+                  }
+                  onDestroy={() => setDialogAction('FORCED_CANCEL')}
+                  onSaveLog={(note) => {
+                    addTrayCareLog(detail.tray.id, note)
+                    message.success(
+                      'Đã lưu ghi chú vào nhật ký chăm sóc của mẻ.',
+                    )
+                  }}
+                />
+              </>
+            ) : (
+              <section className="tray-detail-section tray-empty-rental">
+                <Empty
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  description={
+                    customer
+                      ? `${customer.name} chưa có chu kỳ thuê / mẻ trồng được cấu hình.`
+                      : 'Khay chưa có khách thuê và mẻ trồng.'
+                  }
+                />
+              </section>
             )}
-            <Flex vertical gap={18}>
-              <Flex align="center" justify="space-between" gap={16}>
-                <Space>
-                  <CloudOutlined />
-                  <Typography.Text>Van tưới {detail.tray.code}</Typography.Text>
-                </Space>
-                <Switch
-                  checked={detail.tier.relays.irrigationValves[trayPosition]}
-                  disabled={isNodeUnavailable}
-                  onChange={() => toggleTrayValve(detail.tier.tierId, trayPosition)}
-                  checkedChildren="Bật"
-                  unCheckedChildren="Tắt"
-                />
-              </Flex>
-              <Flex align="center" justify="space-between" gap={16}>
-                <Space>
-                  <ThunderboltOutlined />
-                  <Typography.Text>Quạt {detail.tier.name}</Typography.Text>
-                </Space>
-                <Switch
-                  checked={detail.tier.relays.fan}
-                  disabled={isNodeUnavailable}
-                  onChange={() => toggleTierFan(detail.tier.tierId)}
-                  checkedChildren="Bật"
-                  unCheckedChildren="Tắt"
-                />
-              </Flex>
-            </Flex>
           </div>
-        </Flex>
+        )}
+      </Drawer>
+
+      {dialogAction && detail && (
+        <TrayClosureReasonModal
+          key={dialogAction}
+          action={dialogAction}
+          batchLabel={`${detail.tray.batchId ?? detail.tray.code} · ${detail.tray.code}`}
+          onCancel={() => setDialogAction(null)}
+          onConfirm={handleReasonConfirmation}
+        />
       )}
-    </Drawer>
+
+      {invoiceRequest && detail && rental && lifecycle && (
+        <TrayInvoiceModal
+          key={invoiceRequest.mode}
+          batchId={detail.tray.batchId ?? detail.tray.code}
+          trayId={detail.tray.code}
+          rental={rental}
+          harvestDate={effectiveCurrentDate}
+          mode={invoiceRequest.mode}
+          reason={invoiceRequest.reason}
+          onCancel={() => setInvoiceRequest(null)}
+          onComplete={handleCompleteInvoice}
+        />
+      )}
+    </>
   )
 }
 

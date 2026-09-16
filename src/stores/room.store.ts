@@ -1,19 +1,75 @@
 import { create } from 'zustand'
 import type {
+  CloseTraySessionInput,
+  HarvestStatus,
   Tier,
   TierId,
   TierTelemetry,
   Tray,
   TrayCode,
+  TrayClosureRecord,
+  TrayRental,
   TrayPosition,
   TrayStatus,
 } from '../types/room.types'
+import { DEFAULT_DAILY_OVERDUE_FEE } from '../features/rooms/utils/tray-rental.utils'
 
 interface TraySeed {
   position: TrayPosition
   status?: TrayStatus
   customerId?: string
   batchId?: string
+  rental?: TrayRental
+}
+
+interface RentalSeed
+  extends Omit<
+    TrayRental,
+    | 'startDate'
+    | 'expectedHarvestDate'
+    | 'packageEndDate'
+    | 'dailyOverdueFee'
+    | 'customerContactStatus'
+    | 'careLogs'
+  > {
+  startOffsetDays: number
+  harvestOffsetDays: number
+  packageEndOffsetDays: number
+  dailyOverdueFee?: number
+}
+
+
+
+function getDateOffsetFromToday(offsetDays: number) {
+  const date = new Date()
+  date.setHours(12, 0, 0, 0)
+  date.setDate(date.getDate() + offsetDays)
+
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
+}
+
+function createMockRental(seed: RentalSeed): TrayRental {
+  const {
+    startOffsetDays,
+    harvestOffsetDays,
+    packageEndOffsetDays,
+    dailyOverdueFee = DEFAULT_DAILY_OVERDUE_FEE,
+    ...rental
+  } = seed
+
+  return {
+    ...rental,
+    startDate: getDateOffsetFromToday(startOffsetDays),
+    expectedHarvestDate: getDateOffsetFromToday(harvestOffsetDays),
+    packageEndDate: getDateOffsetFromToday(packageEndOffsetDays),
+    dailyOverdueFee,
+    customerContactStatus: 'NOT_CONTACTED',
+    careLogs: [],
+  }
 }
 
 function createTray(tierId: TierId, seed: TraySeed): Tray {
@@ -26,6 +82,7 @@ function createTray(tierId: TierId, seed: TraySeed): Tray {
     status: seed.status ?? 'empty',
     customerId: seed.customerId ?? null,
     batchId: seed.batchId ?? null,
+    rental: seed.rental ?? null,
   }
 }
 
@@ -55,16 +112,88 @@ export const MOCK_TIERS: Tier[] = [
     1,
     { temperature: 25.2, humidity: 88, co2: 630 },
     [
-      { position: 1, status: 'rented', customerId: 'TENANT-001', batchId: 'BATCH-001' },
-      { position: 2 },
-      { position: 3, status: 'maintenance', batchId: 'BATCH-006' },
+      {
+        position: 1,
+        status: 'rented',
+        customerId: 'TENANT-001',
+        batchId: 'MCMS-2608-A01',
+        rental: createMockRental({
+          tenantName: 'Nguyễn Minh Anh',
+          tenantPhone: '0901234567',
+          tenantAddress: '18 Nguyễn Văn Linh, Hải Châu, Đà Nẵng',
+          mushroomType: 'Nấm Bào Ngư Xám',
+          mushroomVariety: 'Giống PN-01',
+          weeks: 1,
+          startOffsetDays: -3,
+          harvestOffsetDays: 3,
+          packageEndOffsetDays: 4,
+          basePrice: 150_000,
+          harvestStatus: 'GROWING',
+        }),
+      },
+      {
+        position: 2,
+        status: 'rented',
+        customerId: 'TENANT-005',
+        batchId: 'FLOOR-1-HOANG-KIM',
+        rental: createMockRental({
+          tenantName: 'Phạm Thanh Tùng',
+          tenantPhone: '0938123456',
+          tenantAddress: '71 Cách Mạng Tháng 8, Quận 3, TP.HCM',
+          mushroomType: 'Nấm Hoàng Kim',
+          mushroomVariety: 'Giống HK-02',
+          weeks: 1,
+          startOffsetDays: -17,
+          harvestOffsetDays: -11,
+          packageEndOffsetDays: -10,
+          basePrice: 175_000,
+          harvestStatus: 'GROWING',
+        }),
+      },
+      {
+        position: 3,
+        status: 'rented',
+        customerId: 'TENANT-003',
+        batchId: 'FLOOR-1-MOI-DEN',
+        rental: createMockRental({
+          tenantName: 'Lê Thu Hà',
+          tenantPhone: '0987654321',
+          tenantAddress: '27 Trần Phú, Hải Châu, Đà Nẵng',
+          mushroomType: 'Nấm Mối Đen',
+          mushroomVariety: 'Giống MD-03',
+          weeks: 1,
+          startOffsetDays: 0,
+          harvestOffsetDays: 6,
+          packageEndOffsetDays: 7,
+          basePrice: 190_000,
+          harvestStatus: 'GROWING',
+        }),
+      },
     ],
   ),
   createTier(
     2,
     { temperature: 26.4, humidity: 82, co2: 780 },
     [
-      { position: 1, status: 'rented', customerId: 'TENANT-002', batchId: 'BATCH-002' },
+      {
+        position: 1,
+        status: 'rented',
+        customerId: 'TENANT-002',
+        batchId: 'MCMS-2607-L02',
+        rental: createMockRental({
+          tenantName: 'Trần Quốc Bảo',
+          tenantPhone: '0912345678',
+          tenantAddress: '52 Lê Lợi, Ninh Kiều, Cần Thơ',
+          mushroomType: 'Nấm Linh Chi',
+          mushroomVariety: 'Giống LG-04',
+          weeks: 1,
+          startOffsetDays: -5,
+          harvestOffsetDays: 1,
+          packageEndOffsetDays: 2,
+          basePrice: 175_000,
+          harvestStatus: 'GROWING',
+        }),
+      },
       { position: 2 },
       { position: 3 },
     ],
@@ -73,7 +202,25 @@ export const MOCK_TIERS: Tier[] = [
     3,
     { temperature: 24.8, humidity: 90, co2: 710 },
     [
-      { position: 1, status: 'rented', customerId: 'TENANT-004', batchId: 'BATCH-004' },
+      {
+        position: 1,
+        status: 'harvesting',
+        customerId: 'TENANT-004',
+        batchId: 'MCMS-2606-B03',
+        rental: createMockRental({
+          tenantName: 'Võ Ngọc Thảo',
+          tenantPhone: '0977123456',
+          tenantAddress: '106 Phan Xích Long, Phú Nhuận, TP.HCM',
+          mushroomType: 'Nấm Bào Ngư Trắng',
+          mushroomVariety: 'Giống BT-05',
+          weeks: 1,
+          startOffsetDays: -6,
+          harvestOffsetDays: 0,
+          packageEndOffsetDays: 1,
+          basePrice: 150_000,
+          harvestStatus: 'READY_TO_HARVEST',
+        }),
+      },
       { position: 2 },
       { position: 3 },
     ],
@@ -82,7 +229,7 @@ export const MOCK_TIERS: Tier[] = [
     4,
     { temperature: 25.9, humidity: 85, co2: 860 },
     [
-      { position: 1, status: 'harvesting', customerId: 'TENANT-003', batchId: 'BATCH-003' },
+      { position: 1 },
       { position: 2 },
       { position: 3, status: 'maintenance' },
     ],
@@ -91,11 +238,19 @@ export const MOCK_TIERS: Tier[] = [
 
 interface RoomState {
   tiers: Tier[]
+  closureRecords: TrayClosureRecord[]
   telemetrySimulationEnabled: boolean
   assignCustomerToTray: (trayId: string, customerId: string) => void
   releaseCustomerTrays: (customerId: string) => void
   toggleTierFan: (tierId: TierId) => void
   toggleTrayValve: (tierId: TierId, position: TrayPosition) => void
+  updateTrayHarvestStatus: (
+    trayId: string,
+    harvestStatus: HarvestStatus,
+  ) => void
+  confirmTrayCustomerContact: (trayId: string) => void
+  addTrayCareLog: (trayId: string, note: string) => void
+  closeTraySession: (input: CloseTraySessionInput) => TrayClosureRecord
   setTelemetrySimulationEnabled: (enabled: boolean) => void
   simulateTelemetry: () => void
 }
@@ -118,6 +273,7 @@ function clamp(value: number, minimum: number, maximum: number) {
 
 export const useRoomStore = create<RoomState>((set, get) => ({
   tiers: MOCK_TIERS,
+  closureRecords: [],
   telemetrySimulationEnabled: false,
 
   assignCustomerToTray: (trayId, customerId) => {
@@ -201,6 +357,109 @@ export const useRoomStore = create<RoomState>((set, get) => ({
           : tier,
       ),
     })),
+
+  updateTrayHarvestStatus: (trayId, harvestStatus) =>
+    set((state) => ({
+      tiers: state.tiers.map((tier) => ({
+        ...tier,
+        trays: tier.trays.map((tray) =>
+          tray.id === trayId && tray.rental
+            ? {
+                ...tray,
+                status:
+                  harvestStatus === 'GROWING' ? 'rented' : 'harvesting',
+                rental: { ...tray.rental, harvestStatus },
+              }
+            : tray,
+        ),
+      })),
+    })),
+
+  confirmTrayCustomerContact: (trayId) =>
+    set((state) => ({
+      tiers: state.tiers.map((tier) => ({
+        ...tier,
+        trays: tier.trays.map((tray) =>
+          tray.id === trayId && tray.rental
+            ? {
+                ...tray,
+                rental: {
+                  ...tray.rental,
+                  customerContactStatus: 'DELIVERY_CONFIRMED',
+                },
+              }
+            : tray,
+        ),
+      })),
+    })),
+
+  addTrayCareLog: (trayId, note) =>
+    set((state) => ({
+      tiers: state.tiers.map((tier) => ({
+        ...tier,
+        trays: tier.trays.map((tray) =>
+          tray.id === trayId && tray.rental
+            ? {
+                ...tray,
+                rental: {
+                  ...tray.rental,
+                  careLogs: [
+                    {
+                      id: `CARE-${tray.id}-${Date.now()}`,
+                      note,
+                      createdAt: new Date().toISOString(),
+                    },
+                    ...tray.rental.careLogs,
+                  ],
+                },
+              }
+            : tray,
+        ),
+      })),
+    })),
+
+  closeTraySession: (input) => {
+    const tray = findTray(get().tiers, input.trayId)
+
+    if (!tray?.rental || !tray.batchId) {
+      throw new Error('Khay không có mẻ trồng đang hoạt động để kết thúc.')
+    }
+
+    const record: TrayClosureRecord = {
+      id: `CLOSE-${tray.batchId}-${Date.now()}`,
+      trayId: tray.id,
+      batchId: tray.batchId,
+      tenantId: tray.customerId,
+      tenantName: tray.rental.tenantName,
+      outcome: input.outcome,
+      reason: input.reason,
+      actualHarvestWeightKg: input.actualHarvestWeightKg ?? null,
+      basePrice: tray.rental.basePrice,
+      overdueFee: input.overdueFee ?? 0,
+      totalAmount: input.totalAmount ?? 0,
+      closedAt: new Date().toISOString(),
+    }
+
+    set((state) => ({
+      closureRecords: [record, ...state.closureRecords],
+      tiers: state.tiers.map((tier) => ({
+        ...tier,
+        trays: tier.trays.map((item) =>
+          item.id === input.trayId
+            ? {
+                ...item,
+                status: 'empty',
+                customerId: null,
+                batchId: null,
+                rental: null,
+              }
+            : item,
+        ),
+      })),
+    }))
+
+    return record
+  },
 
   setTelemetrySimulationEnabled: (enabled) =>
     set({ telemetrySimulationEnabled: enabled }),

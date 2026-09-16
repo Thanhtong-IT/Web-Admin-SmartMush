@@ -48,3 +48,17 @@ export interface CameraConfig {
   isLive: boolean
   lastSnapshotUrl: string | null
 }
+
+export interface FloorClimateThresholdValues {
+  tempMin: number
+  tempMax: number
+  humidityMin: number
+  humidityMax: number
+  co2Max: number
+}
+
+export interface FloorClimateConfig extends FloorClimateThresholdValues {
+  tierId: TierId
+  mode: 'AUTO'
+  updatedAt: string
+}

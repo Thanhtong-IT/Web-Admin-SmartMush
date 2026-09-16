@@ -56,11 +56,21 @@ const CATEGORY_LABELS: Record<AlertCategory, string> = {
   CO2: 'Nồng độ CO₂',
   DEVICE_OFFLINE: 'ESP32 mất kết nối',
   HARDWARE_FAULT: 'Lỗi phần cứng',
+  ORDER_OVERDUE: 'Mẻ quá hạn thu hoạch',
+  CONTAMINATION: 'Nhiễm bệnh / Mốc',
 }
 
 function formatValue(alert: SystemAlert) {
   if (alert.currentValue === null) {
     return null
+  }
+
+  // ORDER_OVERDUE & CONTAMINATION đã có nội dung trong `message` — tránh in "11 giây" lố
+  if (alert.category === 'ORDER_OVERDUE') {
+    return `${alert.currentValue} ngày quá hạn`
+  }
+  if (alert.category === 'CONTAMINATION') {
+    return alert.currentValue >= 1 ? 'Đã phát hiện' : 'Đang theo dõi'
   }
 
   const unit =

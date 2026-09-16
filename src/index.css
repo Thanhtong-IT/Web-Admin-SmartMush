@@ -115,19 +115,6 @@ select {
   white-space: nowrap;
 }
 
-.tray-drawer-metrics {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.tray-relay-panel {
-  padding: 16px;
-  border: 1px solid #d9e2dc;
-  border-radius: 6px;
-  background: #f7faf8;
-}
-
 .rs485-topology {
   display: grid;
   grid-template-columns: 160px minmax(90px, 1fr) minmax(420px, 3fr);
@@ -336,10 +323,6 @@ select {
   .rack-tray-meta {
     margin-top: 12px;
     white-space: normal;
-  }
-
-  .tray-drawer-metrics {
-    grid-template-columns: 1fr;
   }
 
   .camera-rack-overview {

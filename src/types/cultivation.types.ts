@@ -10,6 +10,20 @@ export type MushroomQuality =
   | 'GRADE_B'
   | 'WARNING_CONTAMINATED'
 
+export type SnapshotStage =
+  | 'INCUBATION'
+  | 'PINNING'
+  | 'FRUITING'
+  | 'HARVEST_READY'
+
+export interface GallerySnapshot {
+  id: string
+  imageUrl: string
+  timestamp: string
+  stage: SnapshotStage
+  note?: string
+}
+
 export interface CultivationLog {
   id: string
   timestamp: string
@@ -17,6 +31,9 @@ export interface CultivationLog {
   note: string
   loggedBy: string
   actionTaken: string
+  snapshotUrl?: string
+  snapshotTimestamp?: string
+  snapshotStage?: SnapshotStage
 }
 
 export interface CultivationBatch {
@@ -36,6 +53,7 @@ export interface CultivationBatch {
   tenantName: string
   healthStatus: MushroomQuality
   logs: CultivationLog[]
+  gallerySnapshots: GallerySnapshot[]
 }
 
 export type CultivationLogInput = Omit<CultivationLog, 'id' | 'timestamp'>

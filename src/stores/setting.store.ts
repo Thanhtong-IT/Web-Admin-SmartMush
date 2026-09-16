@@ -1,30 +1,19 @@
 import { create } from 'zustand'
 import type {
   MushroomThresholdProfile,
-  NotificationChannelConfig,
-  SystemIoTConfig,
   ThresholdProfileInput,
 } from '../types/setting.types'
 
-const SETTINGS_STORAGE_KEY = 'mcms-system-settings'
+const SETTINGS_STORAGE_KEY = 'mcms-threshold-profiles'
 
-export const DEFAULT_SYSTEM_CONFIG: SystemIoTConfig = {
-  telemetryIntervalSeconds: 10,
-  deviceOfflineTimeoutMinutes: 5,
-  cameraSnapshotIntervalMinutes: 15,
-  autoRelayTriggerEnabled: true,
-  debugMode: false,
-}
-
-export const DEFAULT_NOTIFICATION_CONFIG: NotificationChannelConfig = {
-  emailEnabled: true,
-  adminEmail: 'admin@mcms.vn',
-  telegramEnabled: false,
-  telegramBotToken: '',
-  telegramChatId: '',
-  zaloEnabled: false,
-  criticalAlertsOnly: true,
-  dailyReportEmail: 'reports@mcms.vn',
+/** Chu kỳ gói (tuần) cho từng giống nấm — đồng bộ với Pricing Model. */
+const CYCLE_WEEKS_BY_TYPE: Record<string, number> = {
+  'Nấm Bào Ngư Xám': 1,
+  'Nấm Bào Ngư Trắng': 1,
+  'Nấm Hoàng Kim': 1,
+  'Nấm Linh Chi': 3,
+  'Nấm Mối Đen': 2,
+  'Đông Trùng Hạ Thảo': 4,
 }
 
 export const DEFAULT_THRESHOLD_PROFILES: MushroomThresholdProfile[] = [
@@ -32,6 +21,7 @@ export const DEFAULT_THRESHOLD_PROFILES: MushroomThresholdProfile[] = [
     id: 'THRESHOLD-001',
     mushroomType: 'Nấm Bào Ngư Xám',
     name: 'Bào Ngư Xám tiêu chuẩn',
+    cycleWeeks: 1,
     tempMin: 20,
     tempMax: 28,
     humidityMin: 75,
@@ -46,6 +36,7 @@ export const DEFAULT_THRESHOLD_PROFILES: MushroomThresholdProfile[] = [
     id: 'THRESHOLD-002',
     mushroomType: 'Nấm Linh Chi',
     name: 'Linh Chi sinh trưởng dài ngày',
+    cycleWeeks: 3,
     tempMin: 22,
     tempMax: 30,
     humidityMin: 70,
@@ -60,6 +51,7 @@ export const DEFAULT_THRESHOLD_PROFILES: MushroomThresholdProfile[] = [
     id: 'THRESHOLD-003',
     mushroomType: 'Nấm Hoàng Kim',
     name: 'Hoàng Kim ra quả nhanh',
+    cycleWeeks: 1,
     tempMin: 18,
     tempMax: 26,
     humidityMin: 80,
@@ -74,6 +66,7 @@ export const DEFAULT_THRESHOLD_PROFILES: MushroomThresholdProfile[] = [
     id: 'THRESHOLD-004',
     mushroomType: 'Nấm Mối Đen',
     name: 'Mối Đen vi khí hậu ổn định',
+    cycleWeeks: 2,
     tempMin: 21,
     tempMax: 27,
     humidityMin: 78,
@@ -88,6 +81,7 @@ export const DEFAULT_THRESHOLD_PROFILES: MushroomThresholdProfile[] = [
     id: 'THRESHOLD-005',
     mushroomType: 'Đông Trùng Hạ Thảo',
     name: 'Đông Trùng phòng nuôi chuyên dụng',
+    cycleWeeks: 4,
     tempMin: 18,
     tempMax: 24,
     humidityMin: 85,
@@ -100,10 +94,13 @@ export const DEFAULT_THRESHOLD_PROFILES: MushroomThresholdProfile[] = [
   },
 ]
 
+/** Trả về chu kỳ gói (tuần) cho loại nấm, mặc định 1 tuần. */
+export function getCycleWeeksFor(mushroomType: string): number {
+  return CYCLE_WEEKS_BY_TYPE[mushroomType] ?? 1
+}
+
 interface PersistedSettings {
   thresholdProfiles: MushroomThresholdProfile[]
-  systemConfig: SystemIoTConfig
-  notificationConfig: NotificationChannelConfig
 }
 
 interface SettingState extends PersistedSettings {
@@ -114,12 +111,6 @@ interface SettingState extends PersistedSettings {
   ) => void
   setDefaultThresholdProfile: (id: string) => void
   deleteThresholdProfile: (id: string) => void
-  updateSystemConfig: (values: Partial<SystemIoTConfig>) => void
-  resetSystemConfig: () => void
-  updateNotificationConfig: (
-    values: Partial<NotificationChannelConfig>,
-  ) => void
-  resetNotificationConfig: () => void
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -156,6 +147,7 @@ function parseThresholdProfile(value: unknown): MushroomThresholdProfile | null 
     soilMoistureMax,
     isDefault,
     updatedAt,
+    cycleWeeks,
   } = value
 
   if (
@@ -179,6 +171,7 @@ function parseThresholdProfile(value: unknown): MushroomThresholdProfile | null 
     id,
     mushroomType,
     name,
+    cycleWeeks: isNumber(cycleWeeks) ? cycleWeeks : getCycleWeeksFor(mushroomType),
     tempMin,
     tempMax,
     humidityMin,
@@ -191,118 +184,26 @@ function parseThresholdProfile(value: unknown): MushroomThresholdProfile | null 
   }
 }
 
-function isTelemetryInterval(
-  value: unknown,
-): value is SystemIoTConfig['telemetryIntervalSeconds'] {
-  return value === 5 || value === 10 || value === 30 || value === 60
-}
-
-function isOfflineTimeout(
-  value: unknown,
-): value is SystemIoTConfig['deviceOfflineTimeoutMinutes'] {
-  return value === 1 || value === 3 || value === 5
-}
-
-function isSnapshotInterval(
-  value: unknown,
-): value is SystemIoTConfig['cameraSnapshotIntervalMinutes'] {
-  return value === 5 || value === 15 || value === 60
-}
-
-function parseSystemConfig(value: unknown): SystemIoTConfig | null {
-  if (!isRecord(value)) {
-    return null
-  }
-
-  if (
-    !isTelemetryInterval(value.telemetryIntervalSeconds) ||
-    !isOfflineTimeout(value.deviceOfflineTimeoutMinutes) ||
-    !isSnapshotInterval(value.cameraSnapshotIntervalMinutes) ||
-    !isBoolean(value.autoRelayTriggerEnabled) ||
-    !isBoolean(value.debugMode)
-  ) {
-    return null
-  }
-
-  return {
-    telemetryIntervalSeconds: value.telemetryIntervalSeconds,
-    deviceOfflineTimeoutMinutes: value.deviceOfflineTimeoutMinutes,
-    cameraSnapshotIntervalMinutes: value.cameraSnapshotIntervalMinutes,
-    autoRelayTriggerEnabled: value.autoRelayTriggerEnabled,
-    debugMode: value.debugMode,
-  }
-}
-
-function parseNotificationConfig(
-  value: unknown,
-): NotificationChannelConfig | null {
-  if (!isRecord(value)) {
-    return null
-  }
-
-  if (
-    !isBoolean(value.emailEnabled) ||
-    !isString(value.adminEmail) ||
-    !isBoolean(value.telegramEnabled) ||
-    !isString(value.telegramBotToken) ||
-    !isString(value.telegramChatId) ||
-    !isBoolean(value.zaloEnabled) ||
-    !isBoolean(value.criticalAlertsOnly) ||
-    !isString(value.dailyReportEmail)
-  ) {
-    return null
-  }
-
-  return {
-    emailEnabled: value.emailEnabled,
-    adminEmail: value.adminEmail,
-    telegramEnabled: value.telegramEnabled,
-    telegramBotToken: value.telegramBotToken,
-    telegramChatId: value.telegramChatId,
-    zaloEnabled: value.zaloEnabled,
-    criticalAlertsOnly: value.criticalAlertsOnly,
-    dailyReportEmail: value.dailyReportEmail,
-  }
-}
-
-function readPersistedSettings(): PersistedSettings {
+function readPersistedProfiles(): MushroomThresholdProfile[] {
   if (typeof window === 'undefined') {
-    return {
-      thresholdProfiles: DEFAULT_THRESHOLD_PROFILES,
-      systemConfig: DEFAULT_SYSTEM_CONFIG,
-      notificationConfig: DEFAULT_NOTIFICATION_CONFIG,
-    }
+    return DEFAULT_THRESHOLD_PROFILES
   }
 
   try {
     const rawValue = window.localStorage.getItem(SETTINGS_STORAGE_KEY)
     const parsedValue: unknown = rawValue ? JSON.parse(rawValue) : null
 
-    if (!isRecord(parsedValue)) {
-      throw new Error('Invalid persisted settings')
+    if (!isRecord(parsedValue) || !Array.isArray(parsedValue.thresholdProfiles)) {
+      return DEFAULT_THRESHOLD_PROFILES
     }
 
-    const profiles = Array.isArray(parsedValue.thresholdProfiles)
-      ? parsedValue.thresholdProfiles
-          .map(parseThresholdProfile)
-          .filter((profile): profile is MushroomThresholdProfile => profile !== null)
-      : []
+    const profiles = parsedValue.thresholdProfiles
+      .map(parseThresholdProfile)
+      .filter((profile): profile is MushroomThresholdProfile => profile !== null)
 
-    return {
-      thresholdProfiles:
-        profiles.length > 0 ? profiles : DEFAULT_THRESHOLD_PROFILES,
-      systemConfig:
-        parseSystemConfig(parsedValue.systemConfig) ?? DEFAULT_SYSTEM_CONFIG,
-      notificationConfig:
-        parseNotificationConfig(parsedValue.notificationConfig) ??
-        DEFAULT_NOTIFICATION_CONFIG,
-    }
+    return profiles.length > 0 ? profiles : DEFAULT_THRESHOLD_PROFILES
   } catch {
-    return {
-      thresholdProfiles: DEFAULT_THRESHOLD_PROFILES,
-      systemConfig: DEFAULT_SYSTEM_CONFIG,
-      notificationConfig: DEFAULT_NOTIFICATION_CONFIG,
-    }
+    return DEFAULT_THRESHOLD_PROFILES
   }
 }
 
@@ -321,10 +222,10 @@ function getNow() {
   return new Date().toISOString()
 }
 
-const initialSettings = readPersistedSettings()
+const initialProfiles = readPersistedProfiles()
 
 export const useSettingStore = create<SettingState>((set) => ({
-  ...initialSettings,
+  thresholdProfiles: initialProfiles,
 
   addThresholdProfile: (values) =>
     set((state) => ({
@@ -332,6 +233,8 @@ export const useSettingStore = create<SettingState>((set) => ({
         {
           ...values,
           id: getNextProfileId(state.thresholdProfiles),
+          cycleWeeks:
+            values.cycleWeeks ?? getCycleWeeksFor(values.mushroomType),
           isDefault: false,
           updatedAt: getNow(),
         },
@@ -343,7 +246,13 @@ export const useSettingStore = create<SettingState>((set) => ({
     set((state) => ({
       thresholdProfiles: state.thresholdProfiles.map((profile) =>
         profile.id === id
-          ? { ...profile, ...values, updatedAt: getNow() }
+          ? {
+              ...profile,
+              ...values,
+              cycleWeeks:
+                values.cycleWeeks ?? getCycleWeeksFor(values.mushroomType),
+              updatedAt: getNow(),
+            }
           : profile,
       ),
     })),
@@ -363,25 +272,6 @@ export const useSettingStore = create<SettingState>((set) => ({
         (profile) => profile.id !== id || profile.isDefault,
       ),
     })),
-
-  updateSystemConfig: (values) =>
-    set((state) => ({
-      systemConfig: { ...state.systemConfig, ...values },
-    })),
-
-  resetSystemConfig: () =>
-    set({ systemConfig: { ...DEFAULT_SYSTEM_CONFIG } }),
-
-  updateNotificationConfig: (values) =>
-    set((state) => ({
-      notificationConfig: {
-        ...state.notificationConfig,
-        ...values,
-      },
-    })),
-
-  resetNotificationConfig: () =>
-    set({ notificationConfig: { ...DEFAULT_NOTIFICATION_CONFIG } }),
 }))
 
 useSettingStore.subscribe((state) => {
@@ -389,16 +279,10 @@ useSettingStore.subscribe((state) => {
     return
   }
 
-  const persistedSettings: PersistedSettings = {
-    thresholdProfiles: state.thresholdProfiles,
-    systemConfig: state.systemConfig,
-    notificationConfig: state.notificationConfig,
-  }
-
   try {
     window.localStorage.setItem(
       SETTINGS_STORAGE_KEY,
-      JSON.stringify(persistedSettings),
+      JSON.stringify({ thresholdProfiles: state.thresholdProfiles }),
     )
   } catch {
     // Private mode or quota exhaustion should not break in-memory settings.

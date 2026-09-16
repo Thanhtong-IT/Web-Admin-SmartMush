@@ -23,7 +23,7 @@ export const MOCK_TENANTS: Tenant[] = [
     id: 'TENANT-003',
     name: 'Lê Thu Hà',
     phone: '0987654321',
-    assignedTrayId: 'T4-K1',
+    assignedTrayId: 'T1-K3',
     startDate: '2026-02-20',
     status: 'active',
   },
@@ -41,7 +41,7 @@ export const MOCK_TENANTS: Tenant[] = [
     phone: '0938123456',
     assignedTrayId: 'T1-K2',
     startDate: '2025-06-20',
-    status: 'expired',
+    status: 'active',
   },
 ]
 

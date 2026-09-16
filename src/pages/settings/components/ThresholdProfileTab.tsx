@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import {
+  BulbOutlined,
   DeleteOutlined,
   EditOutlined,
   PlusOutlined,
@@ -7,6 +8,7 @@ import {
   StarOutlined,
 } from '@ant-design/icons'
 import {
+  Alert,
   Button,
   Empty,
   Flex,
@@ -58,60 +60,123 @@ export function ThresholdProfileTab({
       title: 'Giống nấm',
       dataIndex: 'mushroomType',
       key: 'mushroomType',
-      width: 210,
+      width: 240,
       render: (value: string, profile) => (
-        <Flex vertical gap={2}>
+        <Flex vertical gap={4}>
           <Typography.Text strong>{value}</Typography.Text>
-          <Typography.Text type="secondary">{profile.name}</Typography.Text>
+          <Flex gap={4} wrap>
+            {profile.isDefault && <Tag color="gold">Mặc định</Tag>}
+            <Tag color="cyan">
+              Gói {profile.cycleWeeks ?? 1} tuần
+            </Tag>
+          </Flex>
+          <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+            {profile.name}
+          </Typography.Text>
         </Flex>
       ),
     },
     {
-      title: 'Nhiệt độ',
+      title: (
+        <HeaderWithHint
+          text="Dải Nhiệt độ (°C)"
+          hint="Dưới min → kích sưởi · Trên max → bật quạt làm mát"
+        />
+      ),
       key: 'temperature',
-      width: 130,
-      render: (_, profile) => `${profile.tempMin} - ${profile.tempMax} °C`,
+      width: 170,
+      render: (_, profile) => (
+        <ThresholdRangeCell
+          min={profile.tempMin}
+          max={profile.tempMax}
+          unit="°C"
+          minHint="Dưới min → kích sưởi"
+          maxHint="Trên max → bật quạt làm mát"
+        />
+      ),
     },
     {
-      title: 'Độ ẩm không khí',
+      title: (
+        <HeaderWithHint
+          text="Dải Độ ẩm KK (%RH)"
+          hint="Dưới min → kích bơm phun sương tự động"
+        />
+      ),
       key: 'humidity',
-      width: 150,
-      render: (_, profile) =>
-        `${profile.humidityMin} - ${profile.humidityMax} %RH`,
+      width: 180,
+      render: (_, profile) => (
+        <ThresholdRangeCell
+          min={profile.humidityMin}
+          max={profile.humidityMax}
+          unit="%RH"
+          minHint="Dưới min → kích bơm phun sương"
+          maxHint="Trên max → giảm phun sương"
+        />
+      ),
     },
     {
-      title: 'CO₂ tối đa',
-      dataIndex: 'co2Max',
-      key: 'co2Max',
-      width: 110,
-      render: (value: number) => `${value} ppm`,
+      title: (
+        <HeaderWithHint
+          text="Ngưỡng CO₂ an toàn"
+          hint="Vượt ngưỡng → kích hoạt quạt hút thông gió"
+        />
+      ),
+      key: 'co2',
+      width: 140,
+      render: (_, profile) => (
+        <Flex vertical gap={2}>
+          <Typography.Text strong style={{ color: '#7c3aed' }}>
+            &lt; {profile.co2Max} ppm
+          </Typography.Text>
+          <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+            Vượt → bật quạt hút
+          </Typography.Text>
+        </Flex>
+      ),
     },
     {
-      title: 'Độ ẩm giá thể',
+      title: (
+        <HeaderWithHint
+          text="Độ ẩm cơ chất / giá thể (%)"
+          hint="Duy trì độ ẩm giá thể trong dải này để phôi không khô / úng"
+        />
+      ),
       key: 'soilMoisture',
-      width: 150,
-      render: (_, profile) =>
-        `${profile.soilMoistureMin} - ${profile.soilMoistureMax}%`,
-    },
-    {
-      title: 'Mặc định',
-      dataIndex: 'isDefault',
-      key: 'isDefault',
-      width: 100,
-      render: (isDefault: boolean) =>
-        isDefault ? <Tag color="gold">Mặc định</Tag> : null,
+      width: 170,
+      render: (_, profile) => (
+        <Typography.Text>
+          {profile.soilMoistureMin} - {profile.soilMoistureMax}{' '}
+          <Typography.Text type="secondary">%</Typography.Text>
+        </Typography.Text>
+      ),
     },
     ...(canEdit
       ? [
           {
             title: 'Hành động',
             key: 'actions',
-            width: 170,
+            width: 200,
             align: 'right' as const,
             render: (_: unknown, profile: MushroomThresholdProfile) => (
-              <Space size={2}>
-                <Tooltip title="Đặt làm mặc định">
+              <Space size={4}>
+                <Button
+                  size="small"
+                  type="primary"
+                  ghost
+                  icon={<EditOutlined />}
+                  onClick={() => onEdit(profile)}
+                >
+                  Tinh chỉnh thông số
+                </Button>
+                <Tooltip
+                  title={
+                    profile.isDefault
+                      ? 'Đang là profile mặc định'
+                      : 'Đặt làm mặc định'
+                  }
+                >
                   <Button
+                    size="small"
                     type="text"
                     icon={
                       profile.isDefault ? (
@@ -125,15 +190,6 @@ export function ThresholdProfileTab({
                       setDefaultProfile(profile.id)
                       message.success('Đã đặt profile làm mặc định.')
                     }}
-                    aria-label={`Đặt ${profile.mushroomType} làm mặc định`}
-                  />
-                </Tooltip>
-                <Tooltip title="Chỉnh sửa profile">
-                  <Button
-                    type="text"
-                    icon={<EditOutlined />}
-                    onClick={() => onEdit(profile)}
-                    aria-label={`Sửa profile ${profile.mushroomType}`}
                   />
                 </Tooltip>
                 <Popconfirm
@@ -152,11 +208,11 @@ export function ThresholdProfileTab({
                   }}
                 >
                   <Button
+                    size="small"
                     type="text"
                     danger
                     icon={<DeleteOutlined />}
                     disabled={profile.isDefault}
-                    aria-label={`Xóa profile ${profile.mushroomType}`}
                   />
                 </Popconfirm>
               </Space>
@@ -168,6 +224,22 @@ export function ThresholdProfileTab({
 
   return (
     <div>
+      <Alert
+        type="info"
+        showIcon
+        icon={<BulbOutlined />}
+        message={
+          <Typography.Text style={{ fontSize: 13 }}>
+            <strong>Mẹo vận hành:</strong> Các tầng đang bật chế độ{' '}
+            <Tag color="success" style={{ margin: '0 4px' }}>
+              AUTO
+            </Tag>
+            sẽ tự động đồng bộ theo ngưỡng của giống nấm được gán trên khay.
+          </Typography.Text>
+        }
+        style={{ marginBottom: 16, borderRadius: 10 }}
+      />
+
       <Flex
         align="center"
         justify="space-between"
@@ -196,11 +268,55 @@ export function ThresholdProfileTab({
         columns={columns}
         dataSource={visibleProfiles}
         pagination={false}
-        scroll={{ x: 1050 }}
+        scroll={{ x: 1100 }}
         locale={{
           emptyText: <Empty description="Không có profile phù hợp" />,
         }}
       />
     </div>
+  )
+}
+
+function HeaderWithHint({ text, hint }: { text: string; hint: string }) {
+  return (
+    <Tooltip title={hint} placement="topLeft">
+      <span style={{ cursor: 'help', borderBottom: '1px dashed #94a3b8' }}>
+        {text}
+      </span>
+    </Tooltip>
+  )
+}
+
+interface ThresholdRangeCellProps {
+  min: number
+  max: number
+  unit: string
+  minHint: string
+  maxHint: string
+}
+
+function ThresholdRangeCell({
+  min,
+  max,
+  unit,
+  minHint,
+  maxHint,
+}: ThresholdRangeCellProps) {
+  return (
+    <Flex vertical gap={2}>
+      <Typography.Text strong style={{ color: '#059669' }}>
+        {min} - {max} {unit}
+      </Typography.Text>
+      <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+        <Tooltip title={minHint}>
+          <span style={{ cursor: 'help' }}>&lt; {min}</span>
+        </Tooltip>{' '}
+        → sưởi ·{' '}
+        <Tooltip title={maxHint}>
+          <span style={{ cursor: 'help' }}>&gt; {max}</span>
+        </Tooltip>{' '}
+        → làm mát
+      </Typography.Text>
+    </Flex>
   )
 }

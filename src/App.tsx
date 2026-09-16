@@ -1,4 +1,4 @@
-import { ConfigProvider } from 'antd'
+import { App as AntdApp, ConfigProvider } from 'antd'
 import viVN from 'antd/locale/vi_VN'
 import { RouterProvider } from 'react-router-dom'
 import { router } from './app/router'
@@ -8,7 +8,9 @@ import './App.css'
 function App() {
   return (
     <ConfigProvider locale={viVN} theme={mcmsTheme}>
-      <RouterProvider router={router} />
+      <AntdApp>
+        <RouterProvider router={router} />
+      </AntdApp>
     </ConfigProvider>
   )
 }

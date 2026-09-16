@@ -12,20 +12,15 @@ import {
   Select,
   Tag,
   Typography,
-  message,
 } from 'antd'
 import { useAuthStore } from '../../features/auth/store/auth.store'
 import { useCultivationStore } from '../../stores/cultivation.store'
 import { CultivationBatchCard } from './components/CultivationBatchCard'
-import { CultivationLogModal } from './components/CultivationLogModal'
-import { HarvestScheduleModal } from './components/HarvestScheduleModal'
+import { BatchDailyPhotosModal } from './components/BatchDailyPhotosModal'
 import type {
   CultivationBatch,
-  CultivationLogInput,
   GrowthStage,
-  HarvestScheduleInput,
   MushroomQuality,
-  RecordHarvestInput,
 } from '../../types/cultivation.types'
 
 const STAGE_OPTIONS = [
@@ -56,15 +51,6 @@ function canManageCultivation(role: string | undefined) {
 
 export function CultivationManagementPage() {
   const batches = useCultivationStore((state) => state.batches)
-  const advanceStage = useCultivationStore((state) => state.advanceStage)
-  const addLog = useCultivationStore((state) => state.addLog)
-  const scheduleHarvest = useCultivationStore(
-    (state) => state.scheduleHarvest,
-  )
-  const recordHarvest = useCultivationStore((state) => state.recordHarvest)
-  const markContaminated = useCultivationStore(
-    (state) => state.markContaminated,
-  )
   const authUser = useAuthStore((state) => state.user)
   const canManage = canManageCultivation(authUser?.role)
 
@@ -75,14 +61,8 @@ export function CultivationManagementPage() {
     MushroomQuality | undefined
   >()
   const [currentPage, setCurrentPage] = useState(1)
-  const [selectedBatch, setSelectedBatch] = useState<CultivationBatch | null>(
-    null,
-  )
-  const [isLogModalOpen, setIsLogModalOpen] = useState(false)
-  const [isHarvestModalOpen, setIsHarvestModalOpen] = useState(false)
-  const [harvestModalMode, setHarvestModalMode] = useState<
-    'schedule' | 'record'
-  >('schedule')
+  const [dailyPhotosBatch, setDailyPhotosBatch] =
+    useState<CultivationBatch | null>(null)
 
   const mushroomOptions = useMemo(
     () =>
@@ -122,7 +102,15 @@ export function CultivationManagementPage() {
         matchesQuality
       )
     })
-  }, [authUser?.name, batches, canManage, mushroomFilter, qualityFilter, searchText, stageFilter])
+  }, [
+    authUser?.name,
+    batches,
+    canManage,
+    mushroomFilter,
+    qualityFilter,
+    searchText,
+    stageFilter,
+  ])
 
   const maxPage = Math.max(1, Math.ceil(filteredBatches.length / PAGE_SIZE))
   const visiblePage = Math.min(currentPage, maxPage)
@@ -131,64 +119,8 @@ export function CultivationManagementPage() {
     visiblePage * PAGE_SIZE,
   )
 
-  const handleAdvanceStage = (batch: CultivationBatch) => {
-    advanceStage(batch.id)
-    message.success(`Đã chuyển giai đoạn cho ${batch.batchCode}.`)
-  }
-
-  const handleOpenLog = (batch: CultivationBatch) => {
-    setSelectedBatch(batch)
-    setIsLogModalOpen(true)
-  }
-
-  const handleOpenHarvest = (
-    batch: CultivationBatch,
-    mode: 'schedule' | 'record',
-  ) => {
-    setSelectedBatch(batch)
-    setHarvestModalMode(mode)
-    setIsHarvestModalOpen(true)
-  }
-
-  const handleLogSubmit = async (values: CultivationLogInput) => {
-    if (!selectedBatch) {
-      return
-    }
-
-    await new Promise((resolve) => window.setTimeout(resolve, 250))
-    addLog(selectedBatch.id, values)
-    setIsLogModalOpen(false)
-    setSelectedBatch(null)
-    message.success('Đã thêm nhật ký chăm sóc.')
-  }
-
-  const handleSchedule = async (values: HarvestScheduleInput) => {
-    if (!selectedBatch) {
-      return
-    }
-
-    await new Promise((resolve) => window.setTimeout(resolve, 250))
-    scheduleHarvest(selectedBatch.id, values)
-    setIsHarvestModalOpen(false)
-    setSelectedBatch(null)
-    message.success('Đã cập nhật lịch thu hoạch.')
-  }
-
-  const handleRecord = async (values: RecordHarvestInput) => {
-    if (!selectedBatch) {
-      return
-    }
-
-    await new Promise((resolve) => window.setTimeout(resolve, 250))
-    recordHarvest(selectedBatch.id, values)
-    setIsHarvestModalOpen(false)
-    setSelectedBatch(null)
-    message.success('Đã ghi nhận hoàn tất thu hoạch.')
-  }
-
-  const handleMarkContaminated = (batch: CultivationBatch) => {
-    markContaminated(batch.id)
-    message.warning(`Đã đánh dấu cảnh báo cho ${batch.batchCode}.`)
+  const handleOpenDailyPhotos = (batch: CultivationBatch) => {
+    setDailyPhotosBatch(batch)
   }
 
   const resetFilters = () => {
@@ -210,14 +142,17 @@ export function CultivationManagementPage() {
       >
         <div>
           <Typography.Title level={3} style={{ margin: 0 }}>
-            Tiến trình sinh trưởng & Thu hoạch
+            Camera giám sát sinh trưởng nấm
           </Typography.Title>
           <Typography.Text type="secondary">
-            Theo dõi vòng đời, nhật ký chăm sóc và sản lượng từng mẻ nấm
+            Theo dõi 7 ngày sinh trưởng của mỗi mẻ qua ảnh chụp tự động 08:00 mỗi sáng
           </Typography.Text>
         </div>
 
-        <Tag icon={<FilterOutlined />} color={canManage ? 'processing' : 'default'}>
+        <Tag
+          icon={<FilterOutlined />}
+          color={canManage ? 'processing' : 'default'}
+        >
           {canManage ? 'Toàn quyền vận hành' : 'Chỉ xem mẻ của bạn'}
         </Tag>
       </Flex>
@@ -284,16 +219,7 @@ export function CultivationManagementPage() {
             <CultivationBatchCard
               key={batch.id}
               batch={batch}
-              canManage={canManage}
-              onAdvanceStage={handleAdvanceStage}
-              onAddLog={handleOpenLog}
-              onScheduleHarvest={(selected) =>
-                handleOpenHarvest(selected, 'schedule')
-              }
-              onRecordHarvest={(selected) =>
-                handleOpenHarvest(selected, 'record')
-              }
-              onMarkContaminated={handleMarkContaminated}
+              onDailyPhotos={handleOpenDailyPhotos}
             />
           ))}
         </Flex>
@@ -312,31 +238,12 @@ export function CultivationManagementPage() {
         </Flex>
       )}
 
-      {canManage && (
-        <>
-          <CultivationLogModal
-            open={isLogModalOpen}
-            batch={selectedBatch}
-            onCancel={() => {
-              setIsLogModalOpen(false)
-              setSelectedBatch(null)
-            }}
-            onSubmit={handleLogSubmit}
-          />
-
-          <HarvestScheduleModal
-            open={isHarvestModalOpen}
-            mode={harvestModalMode}
-            batch={selectedBatch}
-            onCancel={() => {
-              setIsHarvestModalOpen(false)
-              setSelectedBatch(null)
-            }}
-            onSchedule={handleSchedule}
-            onRecord={handleRecord}
-          />
-        </>
-      )}
+      <BatchDailyPhotosModal
+        key={dailyPhotosBatch?.id ?? 'daily-photos-closed'}
+        open={Boolean(dailyPhotosBatch)}
+        batch={dailyPhotosBatch}
+        onCancel={() => setDailyPhotosBatch(null)}
+      />
     </div>
   )
 }
