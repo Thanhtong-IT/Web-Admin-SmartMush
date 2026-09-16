@@ -35,14 +35,6 @@ const VND_FULL = new Intl.NumberFormat('vi-VN', {
   maximumFractionDigits: 0,
 })
 
-interface TooltipPayload {
-  payload: ComparativeChartPoint
-  current: number
-  previous: number
-  difference: number
-  deltaPercent: number
-}
-
 function CustomTooltip({
   active,
   payload,

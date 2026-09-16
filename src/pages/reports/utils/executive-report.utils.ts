@@ -1,4 +1,4 @@
-import type { RevenueSummary, YieldSummary } from '../../types/alert.types'
+import type { RevenueSummary, YieldSummary } from './reports-shared.types'
 
 /**
  * Utilities cho Executive Dashboard — tất cả hàm số đều có fallback an toàn,

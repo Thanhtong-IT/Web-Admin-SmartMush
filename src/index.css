@@ -2,6 +2,17 @@
   box-sizing: border-box;
 }
 
+/* ── Loading fallback cho route lazy ────────────────────────────────────── */
+.page-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 60vh;
+  padding: 40px 20px;
+  color: var(--mcms-text-muted, #64748b);
+}
+
 html,
 body,
 #root {

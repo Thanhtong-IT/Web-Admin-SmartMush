@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import {
   DollarOutlined,
-  TagsOutlined,
   TruckOutlined,
 } from '@ant-design/icons'
 import {

@@ -138,6 +138,10 @@ export function FloorClimateConfigModal({
       return
     }
     const calc = calculateMushroomProfileAverages(validProfiles)
+    if (!calc) {
+      message.error('Không thể tính ngưỡng — danh sách profile không hợp lệ.')
+      return
+    }
     form.setFieldsValue({
       tempMin: calc.tempMin,
       tempMax: calc.tempMax,

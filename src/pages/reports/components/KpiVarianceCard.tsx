@@ -5,12 +5,6 @@ import {
 import { Card, Flex, Tooltip, Typography } from 'antd'
 import type { ReactNode } from 'react'
 
-const VND = new Intl.NumberFormat('vi-VN', {
-  style: 'currency',
-  currency: 'VND',
-  maximumFractionDigits: 0,
-})
-
 interface KpiVarianceCardProps {
   icon: ReactNode
   iconBg: string
@@ -33,7 +27,7 @@ export function KpiVarianceCard({
   iconBg,
   iconColor,
   title,
-  currentLabel,
+  currentLabel: _currentLabel,
   currentValue,
   previousLabel,
   previousValue,

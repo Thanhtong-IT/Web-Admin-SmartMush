@@ -1,27 +1,96 @@
+import { Suspense, lazy, type ReactElement } from 'react'
 import { Navigate, createBrowserRouter } from 'react-router-dom'
 import { LoginPage } from '../../features/auth/pages/LoginPage'
-import { DashboardPage } from '../../features/dashboard/pages/DashboardPage'
-import { RoomListPage } from '../../features/rooms/pages/RoomListPage'
-import { TenantListPage } from '../../features/tenants/pages/TenantListPage'
-import { CameraOverviewPage } from '../../pages/camera/CameraOverviewPage'
-import { DeviceManagementPage } from '../../pages/devices/DeviceManagementPage'
-import { IoTHistoryPage } from '../../pages/devices/IoTHistoryPage'
-import { OrderManagementPage } from '../../pages/orders/OrderManagementPage'
-import { PackageManagementPage } from '../../pages/packages/PackageManagementPage'
-import { CultivationManagementPage } from '../../pages/cultivation/CultivationManagementPage'
-import { AlertManagementPage } from '../../pages/alerts/AlertManagementPage'
-import { ReportsAnalyticsPage } from '../../pages/reports/ReportsAnalyticsPage'
-import { ReportsErrorBoundary } from '../../pages/reports/components/ReportsErrorBoundary'
-import { UserManagementPage } from '../../pages/users/UserManagementPage'
-import { SettingsPage } from '../../pages/settings/SettingsPage'
 import { AdminLayout } from '../layouts/AdminLayout'
 import { AuthGuard } from './guards/AuthGuard'
 import { RoleGuard } from '../../routes/RoleGuard'
+import { PageFallback } from './PageFallback'
+
+// ──────────────────────────────────────────────────────────────────────────
+// Route-level code splitting: mỗi page là một chunk riêng, chỉ tải khi user
+// truy cập. Giúp giảm Initial JS payload từ ~2MB xuống ~400-500KB.
+// ──────────────────────────────────────────────────────────────────────────
+
+const DashboardPage = lazy(() =>
+  import('../../features/dashboard/pages/DashboardPage').then((m) => ({
+    default: m.DashboardPage,
+  })),
+)
+const RoomListPage = lazy(() =>
+  import('../../features/rooms/pages/RoomListPage').then((m) => ({
+    default: m.RoomListPage,
+  })),
+)
+const TenantListPage = lazy(() =>
+  import('../../features/tenants/pages/TenantListPage').then((m) => ({
+    default: m.TenantListPage,
+  })),
+)
+const CameraOverviewPage = lazy(() =>
+  import('../../pages/camera/CameraOverviewPage').then((m) => ({
+    default: m.CameraOverviewPage,
+  })),
+)
+const DeviceManagementPage = lazy(() =>
+  import('../../pages/devices/DeviceManagementPage').then((m) => ({
+    default: m.DeviceManagementPage,
+  })),
+)
+const IoTHistoryPage = lazy(() =>
+  import('../../pages/devices/IoTHistoryPage').then((m) => ({
+    default: m.IoTHistoryPage,
+  })),
+)
+const OrderManagementPage = lazy(() =>
+  import('../../pages/orders/OrderManagementPage').then((m) => ({
+    default: m.OrderManagementPage,
+  })),
+)
+const PackageManagementPage = lazy(() =>
+  import('../../pages/packages/PackageManagementPage').then((m) => ({
+    default: m.PackageManagementPage,
+  })),
+)
+const CultivationManagementPage = lazy(() =>
+  import('../../pages/cultivation/CultivationManagementPage').then((m) => ({
+    default: m.CultivationManagementPage,
+  })),
+)
+const AlertManagementPage = lazy(() =>
+  import('../../pages/alerts/AlertManagementPage').then((m) => ({
+    default: m.AlertManagementPage,
+  })),
+)
+const ReportsAnalyticsPage = lazy(() =>
+  import('../../pages/reports/ReportsAnalyticsPage').then((m) => ({
+    default: m.ReportsAnalyticsPage,
+  })),
+)
+const ReportsErrorBoundary = lazy(() =>
+  import('../../pages/reports/components/ReportsErrorBoundary').then((m) => ({
+    default: m.ReportsErrorBoundary,
+  })),
+)
+const UserManagementPage = lazy(() =>
+  import('../../pages/users/UserManagementPage').then((m) => ({
+    default: m.UserManagementPage,
+  })),
+)
+const SettingsPage = lazy(() =>
+  import('../../pages/settings/SettingsPage').then((m) => ({
+    default: m.SettingsPage,
+  })),
+)
+
+/** Bọc một element với Suspense fallback (full-screen PageFallback). */
+function withSuspense(node: ReactElement) {
+  return <Suspense fallback={<PageFallback />}>{node}</Suspense>
+}
 
 export const router = createBrowserRouter([
   {
     path: '/login',
-    element: <LoginPage />,
+    element: withSuspense(<LoginPage />),
   },
   {
     path: '/',
@@ -33,15 +102,15 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <DashboardPage />,
+        element: withSuspense(<DashboardPage />),
       },
       {
         path: 'rooms',
-        element: <RoomListPage />,
+        element: withSuspense(<RoomListPage />),
       },
       {
         path: 'rooms/:id',
-        element: <RoomListPage />,
+        element: withSuspense(<RoomListPage />),
       },
       {
         path: 'trays',
@@ -51,7 +120,7 @@ export const router = createBrowserRouter([
         path: 'devices',
         element: (
           <RoleGuard allowedRoles={['ADMIN', 'OPERATOR']}>
-            <DeviceManagementPage />
+            {withSuspense(<DeviceManagementPage />)}
           </RoleGuard>
         ),
       },
@@ -59,37 +128,37 @@ export const router = createBrowserRouter([
         path: 'devices/history',
         element: (
           <RoleGuard allowedRoles={['ADMIN', 'OPERATOR']}>
-            <IoTHistoryPage />
+            {withSuspense(<IoTHistoryPage />)}
           </RoleGuard>
         ),
       },
       {
         path: 'packages',
-        element: <PackageManagementPage />,
+        element: withSuspense(<PackageManagementPage />),
       },
       {
         path: 'orders',
-        element: <OrderManagementPage />,
+        element: withSuspense(<OrderManagementPage />),
       },
       {
         path: 'cultivation',
-        element: <CultivationManagementPage />,
+        element: withSuspense(<CultivationManagementPage />),
       },
       {
         path: 'alerts',
-        element: <AlertManagementPage />,
+        element: withSuspense(<AlertManagementPage />),
       },
       {
         path: 'reports',
-        element: (
+        element: withSuspense(
           <ReportsErrorBoundary moduleName="Báo cáo & Phân tích">
             <ReportsAnalyticsPage />
-          </ReportsErrorBoundary>
+          </ReportsErrorBoundary>,
         ),
       },
       {
         path: 'customers',
-        element: <TenantListPage />,
+        element: withSuspense(<TenantListPage />),
       },
       {
         path: 'tenants',
@@ -97,19 +166,19 @@ export const router = createBrowserRouter([
       },
       {
         path: 'camera',
-        element: <CameraOverviewPage />,
+        element: withSuspense(<CameraOverviewPage />),
       },
       {
         path: 'users',
         element: (
           <RoleGuard allowedRoles={['ADMIN']}>
-            <UserManagementPage />
+            {withSuspense(<UserManagementPage />)}
           </RoleGuard>
         ),
       },
       {
         path: 'settings',
-        element: <SettingsPage />,
+        element: withSuspense(<SettingsPage />),
       },
     ],
   },

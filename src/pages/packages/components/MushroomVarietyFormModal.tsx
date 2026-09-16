@@ -1,13 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   CalculatorOutlined,
-  DeleteOutlined,
   TruckOutlined,
   HomeOutlined,
 } from '@ant-design/icons'
 import {
   Alert,
-  Button,
   Flex,
   Form,
   Input,
@@ -228,7 +226,7 @@ export function MushroomVarietyFormModal({
             ]}
             style={{ flex: 1 }}
           >
-            <InputNumber
+            <InputNumber<number>
               min={0}
               step={10_000}
               precision={0}
@@ -237,9 +235,11 @@ export function MushroomVarietyFormModal({
               formatter={(value) =>
                 value != null ? `${value} đ / khay` : ''
               }
-              parser={(value) =>
-                Number((value ?? '').replace(/[^\d]/g, '')) || 0
-              }
+              parser={(value) => {
+                const raw = (value ?? '').replace(/[^\d]/g, '')
+                const parsed = Number(raw)
+                return Number.isFinite(parsed) ? parsed : 0
+              }}
             />
           </Form.Item>
 

@@ -9,6 +9,7 @@ const SYSTEM_FALLBACK_PROFILE: MushroomThresholdProfile = {
   id: 'SYSTEM-FALLBACK',
   mushroomType: 'Profile mặc định hệ thống',
   name: 'Profile mặc định hệ thống',
+  cycleWeeks: 4,
   tempMin: 20,
   tempMax: 28,
   humidityMin: 75,

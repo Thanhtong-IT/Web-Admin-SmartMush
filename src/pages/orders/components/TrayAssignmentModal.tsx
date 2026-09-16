@@ -1,8 +1,5 @@
 import { useState } from 'react'
-import {
-  CloseOutlined,
-  InboxOutlined,
-} from '@ant-design/icons'
+import { InboxOutlined } from '@ant-design/icons'
 import {
   Alert,
   Descriptions,
@@ -13,8 +10,8 @@ import {
   Typography,
 } from 'antd'
 import type { AppOrder } from '../../../types/order.types'
-import type { TierId, TrayPosition } from '../../../types/room.types'
-import { TIER_IDS, TRAY_POSITIONS } from '../../../types/room.types'
+import type { TierId } from '../../../types/room.types'
+import { TIER_IDS } from '../../../types/room.types'
 import { getAvailableTrays } from '../../../stores/order.store'
 
 interface TrayAssignmentModalProps {
@@ -42,11 +39,14 @@ export function TrayAssignmentModal({
   const availableTrays = getAvailableTrays([]) // luôn dùng state mới nhất
 
   const traysByTier = TIER_IDS.reduce<
-    Record<TierId, Array<{ trayId: string; position: number }>>
+    Record<TierId, Array<{ trayId: string; tierId: TierId; position: number }>>
   >((acc, tierId) => {
-    acc[tierId] = availableTrays.filter((t) => t.tierId === tierId)
+    // `tierId` đã được narrow về TIER_IDS nên cast sang TierId an toàn
+    acc[tierId] = availableTrays.filter(
+      (t) => t.tierId === tierId,
+    ) as Array<{ trayId: string; tierId: TierId; position: number }>
     return acc
-  }, {} as Record<TierId, Array<{ trayId: string; position: number }>>)
+  }, {} as Record<TierId, Array<{ trayId: string; tierId: TierId; position: number }>>)
 
   const currentTrays = selectedTierId != null ? traysByTier[selectedTierId] ?? [] : []
 

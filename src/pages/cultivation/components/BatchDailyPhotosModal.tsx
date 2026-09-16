@@ -28,11 +28,6 @@ interface BatchDailyPhotosModalProps {
   onCancel: () => void
 }
 
-interface DayPhotoItem {
-  dayIndex: number
-  snapshot: DailySnapshot
-}
-
 const STAGE_NAMES: Array<{
   maxDay: number
   name: string
@@ -213,7 +208,6 @@ export function BatchDailyPhotosModal({
       ) : (
         <div className="batch-daily-thumbs" role="list" aria-label="Chọn ngày xem ảnh">
           {snapshots.map((snap) => {
-            const stage = resolveStageForDay(snap.dayIndex)
             const isActive = snap.dayIndex === activeDayIndex
 
             return (

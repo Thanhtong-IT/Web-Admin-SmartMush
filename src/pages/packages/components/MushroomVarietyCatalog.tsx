@@ -6,7 +6,6 @@ import {
   EditOutlined,
   PlusOutlined,
   SearchOutlined,
-  StopOutlined,
 } from '@ant-design/icons'
 import {
   Button,

@@ -418,7 +418,6 @@ export function IoTTelemetryChart({
                   y={event.value}
                   r={5}
                   ifOverflow="extendDomain"
-                  isFront
                   fill={config.color}
                   stroke="#ffffff"
                   strokeWidth={1.5}

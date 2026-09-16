@@ -3,7 +3,6 @@ import type { AppOrder, CreateOrderInput, OrderStatus } from '../types/order.typ
 import { TIER_IDS, TRAY_POSITIONS } from '../types/room.types'
 import { usePricingStore } from './pricing.store'
 import type { MushroomVariety } from '../types/pricing.types'
-import { calculateOrderPrice } from '../types/pricing.types'
 
 /** Kiểm tra khay có đang trống hay không */
 function isTrayAvailable(
